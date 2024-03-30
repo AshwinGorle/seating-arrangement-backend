@@ -11,6 +11,7 @@ import testingRouter from '../routes/testingRouter.js';
 import seatRouter from '../routes/seatRouter.js';
 import accountRouter from '../routes/accountRouter.js';
 import paymentRouter from '../routes/paymentRouter.js';
+import AuthController from '../controllers/authController.js';
 const app = express();
 
 dotenv.config();
@@ -33,7 +34,7 @@ app.use(express.json());
 
 app.use(checkForAuth);
 
-
+app.get('/',AuthController.homefunction);
 app.use('/api/v1/auth', authRouter)
 app.use('/api/v1/member',memberRouter)
 app.use('/api/v1/organization',organizationRouter)

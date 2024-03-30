@@ -3,6 +3,10 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import transporter from "../configs/emailConfig.js";
 class AuthController {
+  static homefunction = (req, res)=>{
+     return res.send("Shree Ganesh");
+  }
+
   static getUserByToken = async (token) => {
     const tokenData = jwt.verify(token, process.env.SECRET_KEY);
     console.log("11 token data ", tokenData);
