@@ -13,7 +13,7 @@ class AccountController {
           req,
           "Admin requires Organization Id to fetch accounts"
         );
-      const allAccounts = await AccountModel.find({ organization : organizationId}).skip(skip).limit(limit);
+      const allAccounts = await AccountModel.find({ organization : organizationId});
       return res.send({
         status: "success",
         message: `Accounts fetched successfully`,

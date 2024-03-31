@@ -8,5 +8,6 @@ const paymentRouter = express.Router();
 paymentRouter.get('/:paymentId', restrictTo(['all']), PaymentController.getPaymentById)
 paymentRouter.post('/', restrictTo(['all']), PaymentController.makePayment)
 paymentRouter.put('/:paymentId', restrictTo(['all']), PaymentController.updatePaymentById)
+paymentRouter.delete('/:paymentId', restrictTo(['all']), PaymentController.deletePaymentById)
 
 export default paymentRouter;

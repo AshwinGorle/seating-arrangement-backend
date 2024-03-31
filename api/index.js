@@ -12,6 +12,10 @@ import seatRouter from '../routes/seatRouter.js';
 import accountRouter from '../routes/accountRouter.js';
 import paymentRouter from '../routes/paymentRouter.js';
 import AuthController from '../controllers/authController.js';
+import schedule from 'node-schedule';
+import { dueMonthlyFeeForAllOrganizations } from '../controllers/scheduleController.js';
+
+
 const app = express();
 
 dotenv.config();
@@ -25,6 +29,14 @@ const corsOptions = {
     origin : "*",
     credentials : true
 };
+
+//scheduling work;
+ schedule.scheduleJob('* * * * *' , ()=>dueMonthlyFeeForAllOrganizations())
+
+
+
+
+
 
 app.use(cors(corsOptions));
 

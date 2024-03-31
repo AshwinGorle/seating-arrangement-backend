@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>testing script</h1>
+  </body>
+  <script>
+    async function createMember(names, emails) {
+        try{
+      const response = await fetch("http://localhost:4321/api/v1/member", {
+      method: "POST",
+        headers: {
+          authorization:
+            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NjA5OWMzYzRlMjZmNTFiMDY2MjIzYTYiLCJ1c2VyRW1haWwiOiJvd25lckFAZ21haWwuY29tIiwiaWF0IjoxNzExOTA1ODUyLCJleHAiOjE3MTI3Njk4NTJ9.d6Vwz2ph3S4x4vAwWKY65z8JOlJJxRwmrIsrr2VFjbQ",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: names,
+          phone: "7987248241",
+          email: emails,
+          address: "shiv coloni , indore",
+          preparation: "College study",
+          monthlySeatFee: 1100,
+        }),
+      });
+      const  data = await response.json();
+      console.log("--------- ", data.data[0].name)
+    }catch(err){
+        console.log("error in creating :", err);
+    }
+    }
+
+   async function createMultipleMember(start, end){
+    for(let i=start; i<=end; i++){
+        names = `memberA${i}`
+        emails = `memberA${i}@gmail.com`
+        await  createMember(names,emails);
+    }
+   }
+
+   createMultipleMember(1012,1018);
+  </script>
+</html>
