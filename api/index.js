@@ -31,7 +31,7 @@ const corsOptions = {
 };
 
 //scheduling work;
- schedule.scheduleJob('* * * * *' , ()=>dueMonthlyFeeForAllOrganizations())
+ schedule.scheduleJob('*/30 * * * *' , ()=>dueMonthlyFeeForAllOrganizations())
 
 
 
