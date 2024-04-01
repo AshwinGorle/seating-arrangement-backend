@@ -39,7 +39,7 @@ class PaymentController {
     const { amount, type, method, paidBy } = req.body;
 
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
 
     try {
       if (!amount || !type || !method || !paidBy)
@@ -99,7 +99,7 @@ class PaymentController {
 
   static updatePaymentById = async (req, res) => {
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
     try {
       const { paymentId } = req.params;
       const { amount, method } = req.body;
@@ -171,7 +171,7 @@ class PaymentController {
   static deletePaymentById = async (req, res) => {
 
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
     try {
       const { paymentId } = req.params;
 

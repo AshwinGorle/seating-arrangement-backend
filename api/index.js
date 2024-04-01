@@ -12,8 +12,8 @@ import seatRouter from '../routes/seatRouter.js';
 import accountRouter from '../routes/accountRouter.js';
 import paymentRouter from '../routes/paymentRouter.js';
 import AuthController from '../controllers/authController.js';
-import schedule from 'node-schedule';
-import { dueMonthlyFeeForAllOrganizations } from '../controllers/scheduleController.js';
+import scheduleRouter from '../routes/scheduleRouter.js';
+
 
 
 const app = express();
@@ -28,13 +28,7 @@ connectDb(DB_URL);
 const corsOptions = {
     origin : "*",
     credentials : true
-};
-
-//scheduling work;
- schedule.scheduleJob('*/30 * * * *' , ()=>dueMonthlyFeeForAllOrganizations())
-
-
-
+}
 
 
 
@@ -53,6 +47,7 @@ app.use('/api/v1/organization',organizationRouter)
 app.use('/api/v1/seat/',seatRouter)
 app.use('/api/v1/account/', accountRouter);
 app.use('/api/v1/payment/', paymentRouter);
+app.use('/api/v1/schedule/', scheduleRouter);
 
 app.use('/testing', testingRouter );
 

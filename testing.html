@@ -11,11 +11,12 @@
   <script>
     async function createMember(names, emails) {
         try{
-      const response = await fetch("https://seating-arrangement-backend.vercel.app/api/v1/member", {
+       const response = await fetch("https://seating-arrangement-backend.vercel.app/api/v1/member", {
+      //const response = await fetch("http://localhost:4321/api/v1/member", {
       method: "POST",
         headers: {
           authorization:
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NjA5OWMzYzRlMjZmNTFiMDY2MjIzYTYiLCJ1c2VyRW1haWwiOiJvd25lckFAZ21haWwuY29tIiwiaWF0IjoxNzExOTA1ODUyLCJleHAiOjE3MTI3Njk4NTJ9.d6Vwz2ph3S4x4vAwWKY65z8JOlJJxRwmrIsrr2VFjbQ",
+            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NjA5OWJiMDRlMjZmNTFiMDY2MjIzOWEiLCJ1c2VyRW1haWwiOiJvd25lckJAZ21haWwuY29tIiwiaWF0IjoxNzExOTA1NzEyLCJleHAiOjE3MTI3Njk3MTJ9.K8wxb6Mh6_S-1m0tpV5haueJYEbb1qytOHy7ujSHw_8",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -30,18 +31,21 @@
       const  data = await response.json();
       console.log("--------- ", data.data[0].name)
     }catch(err){
-        console.log("error in creating :", err);
+        console.log("error in creating : ",  names , " -------" ,  err);
     }
     }
 
    async function createMultipleMember(start, end){
     for(let i=start; i<=end; i++){
-        names = `memberA${i}`
-        emails = `memberA${i}@gmail.com`
+        names = `memberB${i}`
+        emails = `memberB${i}@gmail.com`
         await  createMember(names,emails);
     }
    }
 
-   createMultipleMember(1020,1100);
+   createMultipleMember(501,600);
   </script>
 </html>
+
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NjA5OWJiMDRlMjZmNTFiMDY2MjIzOWEiLCJ1c2VyRW1haWwiOiJvd25lckJAZ21haWwuY29tIiwiaWF0IjoxNzExOTA1NzEyLCJleHAiOjE3MTI3Njk3MTJ9.K8wxb6Mh6_S-1m0tpV5haueJYEbb1qytOHy7ujSHw_8

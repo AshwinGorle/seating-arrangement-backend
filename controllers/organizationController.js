@@ -160,7 +160,7 @@ class OrganizationController {
       });
 
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
 
     try {
       const owner = await UserModel.findById(ownerId)
@@ -202,7 +202,7 @@ class OrganizationController {
       ).session(session);
 
       await session.commitTransaction();
-      session.endSession();
+      await session.endSession();
 
       return res.send({
         status: "success",
@@ -211,7 +211,7 @@ class OrganizationController {
       });
     } catch (err) {
       await session.abortTransaction();
-      session.endSession();
+      await session.endSession();
 
       console.log("55 addOwnerToOrganization err :", err);
 
@@ -237,7 +237,7 @@ class OrganizationController {
           "Can't delete owner ! Owner Id and Organization Id is required!",
       });
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
 
     try {
       const owner = await UserModel.findById(ownerId);
@@ -262,7 +262,7 @@ class OrganizationController {
       }, {new : true}).session(session);
        
        await session.commitTransaction();
-       session.endSession(); 
+       await session.endSession(); 
       return res.send({
         status: "success",
         message: "Owner deleted successfully!",
@@ -271,7 +271,7 @@ class OrganizationController {
       });
     } catch (err) {
       await session.abortTransaction();
-      session.endSession();
+      await session.endSession();
       console.log("55 deleteOwnerFromOrganization err :", err);
 
       if (err.name === "CastError" && err.kind === "ObjectId") {
@@ -300,7 +300,7 @@ class OrganizationController {
     }
 
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
 
     try {
       const staff = await UserModel.findById(staffId).session(session);
@@ -340,7 +340,7 @@ class OrganizationController {
       ).session(session);
 
       await session.commitTransaction();
-      session.endSession();
+      await session.endSession();
 
       return res.status(200).send({
         status: "success",
@@ -350,7 +350,7 @@ class OrganizationController {
       });
     } catch (err) {
       await session.abortTransaction();
-      session.endSession();
+      await session.endSession();
       console.error("Error adding staff:", err);
 
       if (err.name === "CastError" && err.kind === "ObjectId") {
@@ -388,7 +388,7 @@ class OrganizationController {
     }
 
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
 
     try {
       const staff = await UserModel.findById(staffId);
@@ -418,7 +418,7 @@ class OrganizationController {
       ).session(session);
 
       await session.commitTransaction();
-      session.endSession();
+      await session.endSession();
       return res.send({
         status: "success",
         message: "Staff deleted successfully!",
@@ -427,7 +427,7 @@ class OrganizationController {
       });
     } catch (err) {
       await session.abortTransaction();
-      session.endSession();
+      await session.endSession();
 
       console.log("55 deleteStagFromOrganization err :", err);
 

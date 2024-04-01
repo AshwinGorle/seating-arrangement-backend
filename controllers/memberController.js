@@ -31,7 +31,7 @@ class MemberController {
       }
       const allMembers = await MemberModel.find({
         organization: organizationId,
-      }).populate("account ");
+      }).populate('account');
       if (allMembers.length === 0) {
         throw new Error("No members found in this organization");
       }
@@ -120,7 +120,7 @@ class MemberController {
       req.body;
 
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
 
     try {
       // Checking if all required fields are present
@@ -226,7 +226,7 @@ class MemberController {
   static deleteMember = async (req, res) => {
     const { memberId } = req.params;
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
     try {
       const member = await MemberModel.findById(memberId).session(session);
       if (!member) {

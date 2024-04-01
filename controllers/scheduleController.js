@@ -2,7 +2,9 @@ import MemberModel from "../models/MemberModel.js";
 import OrganizationModel from "../models/OrganizationModel.js";
 import mongoose from "mongoose";
 
-export const dueMonthlyFeeForOrganization = async (organizationId) => {
+class ScheduleController{
+
+static dueMonthlyFeeForOrganization = async (organizationId , retryCount = 4) => {
   const session = await mongoose.startSession();
   await session.startTransaction();
   try {
@@ -41,13 +43,20 @@ export const dueMonthlyFeeForOrganization = async (organizationId) => {
     await session.commitTransaction();
     await session.endSession();
   } catch (err) {
-    await session.abortTransaction();
-    await session.endSession();
-    throw err;
+    if (retryCount > 0 && err.code === 251) { // Retry if transient transaction error
+      console.log(`Retrying transaction. Attempts left: ---------------- ${retryCount}`);
+      await session.abortTransaction();
+      await session.endSession();
+      await this.dueMonthlyFeeForOrganization(organizationId, retryCount - 1);
+    } else {
+      await session.abortTransaction();
+      await session.endSession();
+      throw err;
+    }
   }
 };
 
-export const dueMonthlyFeeForAllOrganizations = async () => {
+static dueMonthlyFeeForAllOrganizations = async (req, res) => {
   console.log("schedule duduction  of Monthly Fee started...");
   let orgIdx = 0;
   let returnOrganization = [];
@@ -56,13 +65,15 @@ export const dueMonthlyFeeForAllOrganizations = async () => {
     returnOrganization = organizations;
     while (orgIdx < organizations.length) {
       const organization = organizations[orgIdx];
-      await dueMonthlyFeeForOrganization(organization._id);
+      await this.dueMonthlyFeeForOrganization(organization._id);
       orgIdx++;
     }
 
-    console.log(
-      "all organizations member fee has been charged and there account updated successfully ! "
-    );
+    res.send({
+      status : "success",
+      message : `All organization's members account checked for date  ${ new Date()}`,
+      data : organizations
+    })
   } catch (err) {
     const successfullyEditedOrg = returnOrganization?.splice(0, orgIdx);
     const unSuccessfullEditedOrg = returnOrganization;
@@ -72,5 +83,16 @@ export const dueMonthlyFeeForAllOrganizations = async () => {
       "Un-successfully edited organizations : ",
       unSuccessfullEditedOrg
     );
+    
+    return res.send({
+      status : "failed",
+      message : `${err.message}`,
+      successfullyEditedOrg : successfullyEditedOrg,
+      unSuccessfullEditedOrg : unSuccessfullEditedOrg
+    })
   }
-};
+}
+
+}
+
+export default ScheduleController;

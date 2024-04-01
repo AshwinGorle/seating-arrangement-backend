@@ -87,7 +87,7 @@ class SeatController {
     const { seatId } = req.params;
     const{seatNumber, description} = req.body;
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
     try {
       const seat = await SeatModel.findById(seatId);
       if (!seat) {
@@ -105,7 +105,7 @@ class SeatController {
       await SeatModel.findByIdAndUpdate(seatId, {seatNumber, description})
       // Commit the transaction
       await session.commitTransaction();
-      session.endSession();
+      await session.endSession();
 
       res.send({
         status: "success",
@@ -114,7 +114,7 @@ class SeatController {
     } catch (err) {
       console.error("Error updating seat:", err);
       await session.abortTransaction();
-      session.endSession();
+       await session.endSession();
   
       res.status(500).send({ status: "failed", message: err.message });
     }
@@ -125,7 +125,7 @@ class SeatController {
   static deleteSeat = async (req, res) => {
     const { seatId } = req.params;
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
     try {
       const seat = await SeatModel.findById(seatId);
       if (!seat) {
@@ -170,7 +170,7 @@ class SeatController {
 
       // Commit the transaction
       await session.commitTransaction();
-      session.endSession();
+      await session.endSession();
 
       res.send({
         status: "success",
@@ -179,7 +179,7 @@ class SeatController {
     } catch (err) {
       console.error("Error deleting seat:", err);
       await session.abortTransaction();
-      session.endSession();
+      await session.endSession();
       res.status(500).send({ status: "failed", message: err.message });
     }
   };
@@ -187,7 +187,7 @@ class SeatController {
   static allocateSeat = async (req, res) => {
     const { schedule, memberId, seatId } = req.body;
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
     try {
       // Check if memberId and seatId are provided
       if (!memberId || !seatId || !schedule) {
@@ -233,7 +233,7 @@ class SeatController {
       member.seat = seatId;
       await Promise.all([seat.save(), member.save()]);
       session.commitTransaction();
-      session.endSession();
+      await session.endSession();
 
       res.status(200).json({
         status: "success",
@@ -256,7 +256,7 @@ class SeatController {
     const { memberId } = req.query;
 
     const session = await mongoose.startSession();
-    session.startTransaction();
+    await session.startTransaction();
 
     try {
       if (!memberId) {
@@ -297,7 +297,7 @@ class SeatController {
       await Promise.all([seat.save(), member.save()]);
 
       await session.commitTransaction();
-      session.endSession();
+      await session.endSession();
 
       res.status(200).json({
         status: "success",
@@ -306,7 +306,7 @@ class SeatController {
       });
     } catch (error) {
       await session.abortTransaction();
-      session.endSession();
+      await session.endSession();
 
       console.error("Error deallocating seats by member ID:", error);
       res.status(400).json({
