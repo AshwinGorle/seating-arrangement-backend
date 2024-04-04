@@ -6,6 +6,7 @@ import AccountController from "./accountController.js";
 import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
 import authorizeActionInOrganization from "../utils/authorizeActionInOrganization.js";
 import AccountModel from "../models/AccountModel.js";
+import PaymentModel from "../models/PaymentModel.js";
 
 class MemberController {
   static getAllMemberByOrganizationId = async (req, res) => {
@@ -89,15 +90,8 @@ class MemberController {
       if (!member) throw new Error("No member found  with this id");
 
       //Authorization check
-      if (
-        !(
-          req.user.role === "admin" ||
-          ((req.user.role === "staff" || req.user.role === "owner") &&
-            req.user.organization.toString() === member.organization.toString())
-        )
-      ) {
-        throw new Error("You are not authorized to Update this member");
-      }
+      authorizeActionInOrganization(req.user, member.organization ,"You are not authorized to Update this member")
+
       const updatedMember = await MemberModel.findByIdAndUpdate(
         memberId,
         { name, email, phone, address },
@@ -239,15 +233,6 @@ class MemberController {
         member.organization,
         "You are not authorized to delete this member in this orgaization"
       );
-      // if (
-      //   !(
-      //     req.user.role === "admin" ||
-      //     ((req.user.role === "staff" || req.user.role === "owner") &&
-      //       req.user.organization.toString() === member.organization.toString())
-      //   )
-      // ) {
-      //   throw new Error("You are not authorized to delete this member");
-      // }
 
       //removing the currently deleting member from the seat's curresponding shcedule there this member is occupant
       const seatUpdateMessage = "";
@@ -265,14 +250,24 @@ class MemberController {
           }
         }
       }
+      
+      //deleting the acount of currently deleting member.
 
       const deletedAcount = await AccountModel.findByIdAndDelete(
         member.account
       ).session(session);
+      
+      // deleteing the payment made by the currently deleting member.
+      
+      for( let i=0; i<member.payments.length; i++){
+         await PaymentModel.findByIdAndDelete(member.payments[i]).session(session); 
+      }
 
       const deletedMember = await MemberModel.findByIdAndDelete(
         memberId
       ).session(session);
+
+
 
       await session.commitTransaction();
       await session.endSession();

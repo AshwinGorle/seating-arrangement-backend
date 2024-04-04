@@ -11,8 +11,8 @@
   <script>
     async function createMember(names, emails) {
         try{
-       const response = await fetch("https://seating-arrangement-backend.vercel.app/api/v1/member", {
-      //const response = await fetch("http://localhost:4321/api/v1/member", {
+      // const response = await fetch("https://seating-arrangement-backend.vercel.app/api/v1/member", {
+      const response = await fetch("http://localhost:4321/api/v1/member", {
       method: "POST",
         headers: {
           authorization:
@@ -43,7 +43,7 @@
     }
    }
 
-   createMultipleMember(501,600);
+   createMultipleMember(1,5);
   </script>
 </html>
 
