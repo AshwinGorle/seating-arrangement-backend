@@ -2,10 +2,12 @@ import UserModel from "../models/UserModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import transporter from "../configs/emailConfig.js";
+import sendEmail from "../utils/sendEmail.js";
+import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
 class AuthController {
-  static homefunction = (req, res)=>{
-     return res.send("Shree Ganesh");
-  }
+  static homefunction = (req, res) => {
+    return res.send("Shree Ganesh");
+  };
 
   static getUserByToken = async (token) => {
     const tokenData = jwt.verify(token, process.env.SECRET_KEY);
@@ -73,18 +75,135 @@ class AuthController {
         { expiresIn: "10d" }
       );
       console.log("1 token", token);
-      res
-        .status(201)
-        .send({
-          status: "success",
-          message: `${role} User Created !`,
-          data: newUser,
-          token: token,
-        });
+      res.status(201).send({
+        status: "success",
+        message: `${role} User Created !`,
+        data: newUser,
+        token: token,
+      });
     } catch (err) {
       return res.send({
         status: "failed",
         message: "user not created",
+        err: err,
+      });
+    }
+  };
+
+  static createOwner = async (req, res) => {
+    const { name, phone, email, password, password_confirmation, gender } =
+      req.body;
+    const role = "owner";
+    if (!(password == password_confirmation))
+      return res.send({
+        status: "failed",
+        message: "Both passowrd doesnot mathch",
+      });
+    if (
+      !(
+        name &&
+        phone &&
+        email &&
+        password &&
+        password_confirmation &&
+        gender &&
+        role
+      )
+    )
+      return res.send({
+        status: "failed",
+        message: "All fields are required!",
+      });
+
+    try {
+      const user = await UserModel.findOne({ email: email });
+      if (user)
+        return res.send({ status: "failed", message: "User Already exists!" });
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      await UserModel.create({
+        name,
+        phone,
+        email,
+        gender,
+        role,
+        password: hashedPassword,
+      });
+      const newUser = await UserModel.findOne({ email: email }).select(
+        "-password"
+      );
+      
+      
+      await sendEmail(
+        email,
+        `Congratulations ${name}! here is your libSteering password`,
+        `Don't share with any one. password : ${password}`
+      );
+      res.send({ status: "success", message: "owner created successfully!" });
+    } catch (err) {
+      console.log("create owner err : ",err );
+      return res.send({
+        status: "failed",
+        message: "user not created",
+        err: err,
+      });
+    }
+  };
+
+  static createStaff = async (req, res) => {
+    const { name, phone, email, password, password_confirmation, gender } =
+      req.body;
+    const role = "staff";
+    if (!(password == password_confirmation))
+    return res.send({
+  status: "failed",
+  message: "Both passowrd doesnot mathch",
+});
+if (
+  !(
+    name &&
+    phone &&
+    email &&
+    password &&
+    password_confirmation &&
+    gender &&
+    role
+    )
+    )
+    return res.send({
+      status: "failed",
+      message: "All fields are required!",
+    });
+    
+    try {
+      const organizarionId = getRequiredOrganizationId(req, 'admin requires organization Id to create staff');
+      const user = await UserModel.findOne({ email: email });
+      if (user)
+        return res.send({ status: "failed", message: "User Already exists!" });
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      await UserModel.create({
+        name,
+        phone,
+        email,
+        gender,
+        role,
+        organization: organizarionId,
+        password: hashedPassword,
+      });
+      const newUser = await UserModel.findOne({ email: email }).select(
+        "-password"
+      );
+      await sendEmail(
+        email,
+        `Congratulations ${name}! here is your libSteering password`,
+        `You are now staff in ${req.user.name}'s liberary. Don't share with anyone. password : ${password}`
+      );
+      res.send({ status: "success", message: "owner created successfully!" });
+    } catch (err) {
+      return res.send({
+        status: "failed",
+        message: `${err.message}`,
         err: err,
       });
     }
@@ -116,23 +235,19 @@ class AuthController {
         { expiresIn: "10d" }
       );
       delete user.password;
-      res
-        .cookie("token", token)
-        .send({
-          status: "success",
-          message: "login successfull!",
-          token: token,
-          data: user,
-        });
+      res.cookie("token", token).send({
+        status: "success",
+        message: "login successfull!",
+        token: token,
+        data: user,
+      });
     } catch (err) {
       console.log("4 login err : ", err);
-      res
-        .status(500)
-        .send({
-          status: "failed",
-          message: "can't login, Something went wrong!",
-          err: err,
-        });
+      res.status(500).send({
+        status: "failed",
+        message: "can't login, Something went wrong!",
+        err: err,
+      });
     }
   };
 

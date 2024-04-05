@@ -17,7 +17,6 @@ const checkForAuth = async (req, res, next) => {
         req.user = user;
         return next();
     } catch (error) {
-        console.log("this is the token err : ", error);
         if (error.message === 'jwt expired') {
             return res.status(401).json({ status : "failed", message : 'Token has expired' });
         } else {

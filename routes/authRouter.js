@@ -5,6 +5,8 @@ import restrictTo from '../middlewares/restrictTo.js'
 const authRouter  = express.Router();
 
 authRouter.post('/signup', AuthController.signup);
+authRouter.post('/creat_owner', restrictTo(["admin"]) ,AuthController.createOwner);
+authRouter.post('/creat_staff',restrictTo(["owner", "admin"]) ,AuthController.createStaff);
 authRouter.post('/login', AuthController.login);
 authRouter.post('/send_reset_passwor_link', AuthController.sendResetPasswordEmail);
 authRouter.post('/change_password', restrictTo(["all"]) ,AuthController.changePassword);

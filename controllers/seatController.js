@@ -6,32 +6,73 @@ import MemberModel from "../models/MemberModel.js";
 import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
 
 class SeatController {
-  static getAllSeats = async (req, res) => {
-     const {page=1, limit=10} = req.query;
-     const skip = (page-1)*limit
+  static searchSeats = async (req, res) => {
+    /*Query Parameters:
+        - schedule : Morning, Noon, Evening, FullDay (default: FullDay)
+        - status: Vacant, Occupied (default: Vacant)
+        - includeMorning: true/false (default: false)
+        - includeNoon: true/false (default: false)
+        - includeEvening: true/false (default: false)
+        */
     try {
-      let requiredOrganizationId = null;
-    
-      //checking if admin is hiting the route then organizationId is required as query params.
-      if (req.user.role == "admin") {
-        const { organizationId } = req.query;
-        if (!organizationId)
-          throw new Error("Admin requires organization Id to fetch all seats");
-        requiredOrganizationId = organizationId;
-      } else {
-        if (!req?.user?.organization)
-          throw new Error("User is not associated with any organization");
-        requiredOrganizationId = req?.user?.organization;
+      const { schedule, status } = req.query;
+      const { includeMorning, includeNoon, includeEvening } = req.query;
+      const organizarionId = getRequiredOrganizationId();
+      const organiation = await OrganizationModel.findById(organizarionId);
+      if (!organiation) {
+        throw new Error("Invalid organization Id is required to get seats");
       }
-      if (!requiredOrganizationId)
-        throw new Error("Organization Id is required to fetch all seats");
+
+      const query = { organization: organizationId };
+      if (schedule) {
+        // Depending on the provided schedule parameter, set the query for the specific time slots
+        if (includeMorning === "true")
+          query["schedule.morning.occupant"] = { $exists: status == 'occupied' ? true : false };
+        if (includeNoon === "true")
+          query["schedule.noon.occupant"] = { $exists: status == 'occupied' ? true : false };
+        if (includeEvening === "true")
+          query["schedule.evening.occupant"] = { $exists: status == 'occupied' ? true : false };
+      }
+
+      // Find seats based on the constructed query
+      const seats = await SeatModel.find(query).populate(
+        `organization schedule.morning.occupant schedule.noon.occupant schedule.evening.occupant schedule.fullDay.occupant`
+      );
+
+      return res.send({
+        status: "success",
+        message: "Seats found based on the search criteria",
+        data: seats,
+      });
+    } catch (err) {
+      console.log("All seats fetching err : ", err);
+
+      res.send({
+        status: "failed",
+        message: `${err.message}`,
+      });
+    }
+  };
+
+  static getAllSeats = async (req, res) => {
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+    try {
+      //checking if admin is hiting the route then organizationId is required as query params.
+      const requiredOrganizationId = getRequiredOrganizationId(
+        req,
+        "Admin requires the Organization Id to fetch all seats"
+      );
       const organization = await OrganizationModel.findById(
         requiredOrganizationId
       );
       if (!organization) throw new Error(`Organization does not exists`);
       const allSeats = await SeatModel.find({
         organization: requiredOrganizationId,
-      }).populate("organization schedule.morning.occupant schedule.noon.occupant schedule.evening.occupant schedule.fullDay.occupant" ).skip(skip).limit(limit);
+      }).populate(
+        "organization schedule.morning.occupant schedule.noon.occupant schedule.evening.occupant schedule.fullDay.occupant"
+      );
+
       res.send({
         status: "success",
         message: `All seats of ${organization.name}`,
@@ -39,7 +80,7 @@ class SeatController {
       });
     } catch (err) {
       console.log("All seats fetching err : ", err);
-      
+
       res.send({
         status: "failed",
         message: `${err.message}`,
@@ -48,20 +89,20 @@ class SeatController {
   };
 
   static createSeat = async (req, res) => {
-
     //required organizatonId
     const { seatNumber, description } = req.body;
 
     try {
       if (!seatNumber)
-      throw new Error("Can't create! Seat Number is required.");
-    
+        throw new Error("Can't create! Seat Number is required.");
+
       //fetching required organizationId
-      const organizationId = getRequiredOrganizationId(req, "Can't create seat ! admin requires Organization Id to create seats.");
-      
-      const organization = await OrganizationModel.findById(
-        organizationId
+      const organizationId = getRequiredOrganizationId(
+        req,
+        "Can't create seat ! admin requires Organization Id to create seats."
       );
+
+      const organization = await OrganizationModel.findById(organizationId);
       if (!organization) throw new Error("Organization does not exists!");
       const seat = await SeatModel.create({
         seatNumber,
@@ -75,17 +116,58 @@ class SeatController {
       });
     } catch (err) {
       console.log("70 createSeat Error :", err);
-      if (err.code && err.code === 11000){
-        res.status(422).send({status : "failed", message : "A organization can not have seats with same seat number"});
-      }else{
-      res.send({ status: "failed", message: err.message });
+      if (err.code && err.code === 11000) {
+        res.status(422).send({
+          status: "failed",
+          message: "A organization can not have seats with same seat number",
+        });
+      } else {
+        res.send({ status: "failed", message: err.message });
       }
     }
   };
 
-  static updateSeat  = async (req, res)=>{
+  static createMultipleSeats = async (req, res) => {
+    const { start, end } = req.query;
+    const noOfSeats = end - start + 1;
+    try {
+      if (!start) throw new Error("No of seats should be provided");
+      if (end - start > 200)
+        throw new Error("Maximum number of seats you can create is 200");
+      const organizationId = getRequiredOrganizationId(
+        req,
+        "Can't create seat ! admin requires Organization Id to create seats."
+      );
+
+      const organization = await OrganizationModel.findById(organizationId);
+      if (!organization) throw new Error("Organization does not exists!");
+
+      const multipleSeats = Array.from(
+        { length: noOfSeats },
+        (_, index) => index + parseInt(start)
+      ).map((seq) => ({
+        seatNumber: seq,
+        description: "",
+        organization: organizationId,
+      }));
+
+      console.log("seats : ", multipleSeats);
+
+      await SeatModel.insertMany(multipleSeats);
+
+      return res.send({
+        status: "success",
+        message: `seats from ${start} to ${end} added successfully `,
+      });
+    } catch (err) {
+      console.log("multiple seat creation err : ", err);
+      return res.send({ status: "failed", message: `${err.message}` });
+    }
+  };
+
+  static updateSeat = async (req, res) => {
     const { seatId } = req.params;
-    const{seatNumber, description} = req.body;
+    const { seatNumber, description } = req.body;
     const session = await mongoose.startSession();
     await session.startTransaction();
     try {
@@ -101,8 +183,7 @@ class SeatController {
         "You are not authorized to update the seat."
       );
 
-
-      await SeatModel.findByIdAndUpdate(seatId, {seatNumber, description})
+      await SeatModel.findByIdAndUpdate(seatId, { seatNumber, description });
       // Commit the transaction
       await session.commitTransaction();
       await session.endSession();
@@ -114,13 +195,11 @@ class SeatController {
     } catch (err) {
       console.error("Error updating seat:", err);
       await session.abortTransaction();
-       await session.endSession();
-  
+      await session.endSession();
+
       res.status(500).send({ status: "failed", message: err.message });
     }
   };
-
-  
 
   static deleteSeat = async (req, res) => {
     const { seatId } = req.params;
@@ -158,7 +237,7 @@ class SeatController {
           if (!fetchedMember)
             throw new Error(`Member with ID ${occupiedMembers[i]} not found!`);
           fetchedMember.seat = null;
-          await fetchedMember.save({session});
+          await fetchedMember.save({ session });
         } catch (err) {
           console.error(`Error updating member ${occupiedMembers[i]}:`, err);
           throw new Error(`${err.message}`); // Rethrow the error to abort the transaction

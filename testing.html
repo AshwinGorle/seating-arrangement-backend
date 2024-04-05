@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>testing script</h1>
+  </body>
+  <script>
+    async function createMember(names, emails) {
+        try{
+      // const response = await fetch("https://seating-arrangement-backend.vercel.app/api/v1/member", {
+      const response = await fetch("http://localhost:4321/api/v1/member", {
+      method: "POST",
+        headers: {
+          authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NjBmNmUyNmJiYTNhZWU2ZTcyM2M1MjMiLCJ1c2VyRW1haWwiOiJhc2h2aW5nb3JsZTEyMzQ1QGdtYWlsLmNvbSIsImlhdCI6MTcxMjI4NzQ0MiwiZXhwIjoxNzEzMTUxNDQyfQ.EVNbQtfyJbAETRKxQZ4XM7xi79ixmWD-_GbcUYS9ZoY",
+          
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: names,
+          phone: "7987248241",
+          email: emails,
+          address: "shiv coloni , indore",
+          preparation: "College study",
+          monthlySeatFee: 350,
+        }),
+      });
+      const  data = await response.json();
+      console.log("--------- ", data.data[0].name)
+    }catch(err){
+        console.log("error in creating : ",  names , " -------" ,  err);
+    }
+    }
+
+   async function createMultipleMember(start, end){
+    for(let i=start; i<=end; i++){
+        names = `G${i}`
+        emails = `G${i}@gmail.com`
+        await  createMember(names,emails);
+    }
+   }
+
+    // createMultipleMember(1,50);
+
+  
+   
+  async function allotSeatToMember (memberId , seatId, schedule){
+    try{
+      // const response = await fetch("https://seating-arrangement-backend.vercel.app/api/v1/member", {
+      const response = await fetch("http://localhost:4321/api/v1/seat/allocate", {
+      method: "POST",
+        headers: {
+          authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NjBmNmUyNmJiYTNhZWU2ZTcyM2M1MjMiLCJ1c2VyRW1haWwiOiJhc2h2aW5nb3JsZTEyMzQ1QGdtYWlsLmNvbSIsImlhdCI6MTcxMjI4NzQ0MiwiZXhwIjoxNzEzMTUxNDQyfQ.EVNbQtfyJbAETRKxQZ4XM7xi79ixmWD-_GbcUYS9ZoY",
+          
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+           memberId,
+           seatId,
+           schedule
+        }),
+      });
+      const  data = await response.json();
+      console.log("--------- ", data.data)
+    }catch(err){
+        console.log("error in alloting : ",err);
+    }
+  }
+  
+  async function getAllMembers(){
+    try{
+    const response = await fetch("http://localhost:4321/api/v1/member", {
+      method: "GET",
+        headers: {
+          authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NjBmNmUyNmJiYTNhZWU2ZTcyM2M1MjMiLCJ1c2VyRW1haWwiOiJhc2h2aW5nb3JsZTEyMzQ1QGdtYWlsLmNvbSIsImlhdCI6MTcxMjI4NzQ0MiwiZXhwIjoxNzEzMTUxNDQyfQ.EVNbQtfyJbAETRKxQZ4XM7xi79ixmWD-_GbcUYS9ZoY",
+          
+          "Content-Type": "application/json",
+        },
+      });
+      const  data = await response.json();
+      const allMembers = data.data;
+      return allMembers;
+      
+    }catch(err){
+        console.log("error in geting all members : ",   err);
+    }
+  }
+  async function getAllSeats(){
+    try{
+    const response = await fetch("http://localhost:4321/api/v1/seat", {
+      method: "GET",
+        headers: {
+          authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NjBmNmUyNmJiYTNhZWU2ZTcyM2M1MjMiLCJ1c2VyRW1haWwiOiJhc2h2aW5nb3JsZTEyMzQ1QGdtYWlsLmNvbSIsImlhdCI6MTcxMjI4NzQ0MiwiZXhwIjoxNzEzMTUxNDQyfQ.EVNbQtfyJbAETRKxQZ4XM7xi79ixmWD-_GbcUYS9ZoY",
+          
+          "Content-Type": "application/json",
+        },
+      });
+      const  data = await response.json();
+      const allSeats = data.data;
+      return allSeats;
+      
+    }catch(err){
+        console.log("error in geting all seats : ",  err);
+    }
+  }
+
+  async function allotMultipleSeats(){
+    try{
+        const schedule = ["morning" , "noon", "evening" ,"fullDay"]
+        const allMembers = await getAllMembers();
+        const allSeats = await getAllSeats();
+        for(let i=0; i<allMembers.length; i++){
+
+           await allotSeatToMember(allMembers[i]._id, allSeats[i]._id, schedule[Math.floor(Math.random() * 4)]);
+        }
+        console.log("all seats alloted---------------!")
+
+    }catch(err){
+      console.log("create multiple seat error : ", err)
+    }
+  }
+
+  // allotMultipleSeats();
+
+  </script>
+</html>
+
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NjA5OWJiMDRlMjZmNTFiMDY2MjIzOWEiLCJ1c2VyRW1haWwiOiJvd25lckJAZ21haWwuY29tIiwiaWF0IjoxNzExOTA1NzEyLCJleHAiOjE3MTI3Njk3MTJ9.K8wxb6Mh6_S-1m0tpV5haueJYEbb1qytOHy7ujSHw_8

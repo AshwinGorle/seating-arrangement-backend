@@ -10,15 +10,11 @@ import PaymentModel from "../models/PaymentModel.js";
 
 class MemberController {
   static getAllMemberByOrganizationId = async (req, res) => {
-    const { organizationId } = req.query;
     // Validate organizationId
-    if (!organizationId) {
-      return res.status(400).send({
-        status: "failed",
-        message: "Organization ID is required to fetch all members",
-      });
-    }
-    try {
+    
+  
+  try {
+      const  organizationId = getRequiredOrganizationId(req, "admin requires organization Id to fetch all members")
       // Authorization check
       authorizeActionInOrganization(
         req.user,

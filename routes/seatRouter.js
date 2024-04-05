@@ -7,6 +7,7 @@ const seatRouter  = express.Router();
 
 seatRouter.get('/', restrictTo(["all"]), SeatController.getAllSeats);
 seatRouter.post('/', restrictTo(["all"]) ,SeatController.createSeat);
+seatRouter.post('/create_multiple_seats', restrictTo(["admin", "owner"]) ,SeatController.createMultipleSeats);
 seatRouter.delete('/:seatId', restrictTo(["all"]) ,SeatController.deleteSeat);
 seatRouter.put('/:seatId', restrictTo(["all"]) ,SeatController.updateSeat);
 
