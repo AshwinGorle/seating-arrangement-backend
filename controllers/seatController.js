@@ -353,11 +353,12 @@ class SeatController {
         "You are not authorized to allocate the seat to this member"
       );
 
-      //seting seat of member null
-      member.seat = null;
-
+      
       const seat = await SeatModel.findById(member.seat._id);
       if (!seat) throw new Error("Member's seat not found");
+      
+      //seting seat of member null
+      member.seat = null;
 
       //removing member from the curresponding shcedule of seat
       for (const key in seat?.schedule) {
