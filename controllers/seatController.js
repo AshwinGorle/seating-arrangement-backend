@@ -325,7 +325,7 @@ class SeatController {
   };
 
   static deallocateSeatByMemberId = async (req, res) => {
-    const { memberId } = req.query;
+    const { memberId } = req.params;
 
     const session = await mongoose.startSession();
     await session.startTransaction();
@@ -342,6 +342,7 @@ class SeatController {
       if (!member) {
         throw new Error("Member not found.");
       }
+      
       if (!member?.seat?._id) {
         throw new Error("Member have not alloted any seat.");
       }
@@ -350,7 +351,7 @@ class SeatController {
       authorizeActionInOrganization(
         req.user,
         member.organization,
-        "You are not authorized to allocate the seat to this member"
+        "You are not authorized to de_allocate the seat of this member"
       );
 
       
@@ -362,8 +363,8 @@ class SeatController {
 
       //removing member from the curresponding shcedule of seat
       for (const key in seat?.schedule) {
-        if (seat?.schedule[key]?.occupant?.toString() == memberId.toString()) {
-          seat?.schedule[key]?.occupant = null;
+        if (seat.schedule[key]?.occupant?.toString() == memberId?.toString()) {
+          seat.schedule[key].occupant = null;
         }
       }
 

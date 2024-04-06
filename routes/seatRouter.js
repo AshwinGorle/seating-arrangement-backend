@@ -13,7 +13,6 @@ seatRouter.delete('/:seatId', restrictTo(["all"]) ,SeatController.deleteSeat);
 seatRouter.put('/:seatId', restrictTo(["all"]) ,SeatController.updateSeat);
 
 seatRouter.post('/allocate', restrictTo(["all"]) ,SeatController.allocateSeat);
-seatRouter.post('/allocate', restrictTo(["all"]) ,SeatController.allocateSeat);
-seatRouter.post('/de_allocate', restrictTo(["all"]) ,SeatController.allocateSeat);
+seatRouter.post('/de_allocate/:memberId', restrictTo(["all"]) ,SeatController.deallocateSeatByMemberId);
 
 export default seatRouter;

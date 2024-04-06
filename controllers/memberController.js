@@ -55,9 +55,11 @@ class MemberController {
       if (!member) throw new Error("No member found  with this id");
 
       //Authorization check
+      console.log("user organization :",req.user.organization);
+      console.log("member organization :",member.organization);
       authorizeActionInOrganization(
         req.user,
-        member.organization,
+        member.organization._id,
         "You are not authorized to fetch this member"
       );
       res.status(200).send({
