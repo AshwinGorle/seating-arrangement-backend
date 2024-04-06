@@ -349,7 +349,7 @@ class SeatController {
       //check auth
       authorizeActionInOrganization(
         req.user,
-        memberId,
+        member.organization,
         "You are not authorized to allocate the seat to this member"
       );
 
