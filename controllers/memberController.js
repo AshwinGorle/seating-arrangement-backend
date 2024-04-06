@@ -11,8 +11,6 @@ import PaymentModel from "../models/PaymentModel.js";
 class MemberController {
   static getAllMemberByOrganizationId = async (req, res) => {
     // Validate organizationId
-    
-  
   try {
       const  organizationId = getRequiredOrganizationId(req, "admin requires organization Id to fetch all members")
       // Authorization check
@@ -279,6 +277,46 @@ class MemberController {
       return res.send({ status: "failed", message: `${err.message}` });
     }
   };
+
+  static memberSearch = async (req, res)=>{
+     /* querie params
+        membershipStatus  : 'active' || 'inactive' || expired,
+
+     */
+    console.log("member search called -----")
+  
+    try {
+      const { membershipStatus ="expired" } = req.query;
+      
+      const organizationId = getRequiredOrganizationId(req, "Admin requires organization id to search members");
+      const organization = await OrganizationModel.findById(organizationId);
+      if (!organization) {
+        throw new Error("Invalid organization Id is required to get seats");
+      }
+      const query = { 
+        organization : organizationId 
+      };
+      
+       query[`membershipStatus`] = membershipStatus;
+       console.log("query--------",query)
+      
+
+      const members = await MemberModel.find(query);
+
+      return res.send({
+        status: "success",
+        message: "Seats found based on the search criteria",
+        data: members,
+      });
+    } catch (err) {
+      console.log("All seats fetching err : ", err);
+
+      res.send({
+        status: "failed",
+        message: `${err.message}`,
+      });
+    }
+  }
 }
 
 export default MemberController;

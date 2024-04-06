@@ -7,34 +7,27 @@ import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
 
 class SeatController {
   static searchSeats = async (req, res) => {
+    console.log("seat search called -----")
     /*Query Parameters:
         - schedule : Morning, Noon, Evening, FullDay (default: FullDay)
         - status: Vacant, Occupied (default: Vacant)
-        - includeMorning: true/false (default: false)
-        - includeNoon: true/false (default: false)
-        - includeEvening: true/false (default: false)
         */
     try {
-      const { schedule, status } = req.query;
+      const { schedule="fullDay", status="vacant" } = req.query;
       const { includeMorning, includeNoon, includeEvening } = req.query;
-      const organizarionId = getRequiredOrganizationId();
-      const organiation = await OrganizationModel.findById(organizarionId);
-      if (!organiation) {
+      const organizationId = getRequiredOrganizationId(req, "Admin requires organization id to search seats");
+      const organization = await OrganizationModel.findById(organizationId);
+      if (!organization) {
         throw new Error("Invalid organization Id is required to get seats");
       }
 
-      const query = { organization: organizationId };
+      const query = { 
+        organization : organizationId 
+      };
       if (schedule) {
-        // Depending on the provided schedule parameter, set the query for the specific time slots
-        if (includeMorning === "true")
-          query["schedule.morning.occupant"] = { $exists: status == 'occupied' ? true : false };
-        if (includeNoon === "true")
-          query["schedule.noon.occupant"] = { $exists: status == 'occupied' ? true : false };
-        if (includeEvening === "true")
-          query["schedule.evening.occupant"] = { $exists: status == 'occupied' ? true : false };
+          query[`schedule.${schedule}.occupant`] = (status == "occupied") ?  { $ne: null } : null;
       }
 
-      // Find seats based on the constructed query
       const seats = await SeatModel.find(query).populate(
         `organization schedule.morning.occupant schedule.noon.occupant schedule.evening.occupant schedule.fullDay.occupant`
       );

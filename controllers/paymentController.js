@@ -3,7 +3,58 @@ import PaymentModel from "../models/PaymentModel.js";
 import mongoose from "mongoose";
 import authorizeActionInOrganization from "../utils/authorizeActionInOrganization.js";
 import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
+import OrganizationModel from "../models/OrganizationModel.js";
 class PaymentController {
+  static getAllPaymentsOfMember = async (req, res) => {
+    console.log("all payment fetched called")
+    try {
+      const {memberId} = req.params;
+      if(!memberId) throw new Error("To fetch all payments of member. memberId is required!");
+      const member = await  MemberModel.findById(memberId).populate('payments account');
+      if(!member) throw new Error("Member not found!");
+      authorizeActionInOrganization(req.user,member.organization,"You are not authorized to get payment of this member!");
+
+      res.send({
+        status : "success",
+        message : "Payments and Account of member successfully!",
+        data: [member.payments, member.account]
+      })
+
+    } catch (err) {
+      console.error("Error fetching all payment:", err);
+      res.status(500).send({
+        status: "failed",
+        message: err.message,
+      });
+    }
+  };
+
+  static getAllPayment = async (req, res) => {
+    try {
+      const organizationId = getRequiredOrganizationId(
+        req,
+        "Admin require organizationId to fetch all payments"
+      );
+      const organization = await OrganizationModel.findById(organizationId);
+      if (!organization)
+        throw new Error("To get all payment organization Id is required");
+      const payments = await PaymentModel.find({
+        organization: organizationId,
+      }).populate("paidBy");
+
+      res.send({
+        status: "success",
+        message: "All payment fetched successfully!",
+        data: payments,
+      });
+    } catch (err) {
+      console.error("Error fetching all payment:", err);
+      res.status(500).send({
+        status: "failed",
+        message: err.message,
+      });
+    }
+  };
   static getPaymentById = async (req, res) => {
     try {
       const { paymentId } = req.params;
@@ -70,7 +121,7 @@ class PaymentController {
 
       // Update the account balance
       member.account.balance -= amount;
-      if(member.account.balance <= 0) member.membershipStatus = "active";
+      if (member.account.balance <= 0) member.membershipStatus = "active";
 
       // Save the member and its corresponding account
       await Promise.all([
@@ -169,7 +220,6 @@ class PaymentController {
   };
 
   static deletePaymentById = async (req, res) => {
-
     const session = await mongoose.startSession();
     await session.startTransaction();
     try {
@@ -182,10 +232,7 @@ class PaymentController {
 
       // Fetch the payment by its ID
       const payment = await PaymentModel.findById(paymentId);
-      if (!payment)
-        throw new Error(
-          "The payment does not exists!"
-        );
+      if (!payment) throw new Error("The payment does not exists!");
 
       const member = await MemberModel.findById(payment.paidBy).populate(
         "account"
@@ -205,13 +252,17 @@ class PaymentController {
 
       //Before deleting the payment reflecting the changes of this deletion in curresponding member's account
       member.account.balance = member.account.balance + payment.amount;
-      
+
       //removing the deleting payment from the curresponding member's paymets array
-      await MemberModel.findByIdAndUpdate(member._id, { $pull : {payments : payment._id} },{new: true}).session(session)
-      
+      await MemberModel.findByIdAndUpdate(
+        member._id,
+        { $pull: { payments: payment._id } },
+        { new: true }
+      ).session(session);
+
       // Saving the updated account balance
-      await member.account.save({ session })
-      
+      await member.account.save({ session });
+
       //finally deleting the payment;
       await PaymentModel.findByIdAndDelete(payment._id).session(session);
 
@@ -221,7 +272,8 @@ class PaymentController {
       // Send the updated payment data in the response
       res.send({
         status: "success",
-        message: "Payment Deleted and curresponding Account Updated successfully",
+        message:
+          "Payment Deleted and curresponding Account Updated successfully",
         data: [payment, member.account],
       });
     } catch (err) {

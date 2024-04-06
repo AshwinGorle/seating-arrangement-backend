@@ -6,6 +6,7 @@ const memberRouter =  express.Router();
 
 //protected route
 memberRouter.get('/', restrictTo(["all"]) , MemberController.getAllMemberByOrganizationId) // necessary query organiztionId;
+memberRouter.get('/search', restrictTo(["all"]) , MemberController.memberSearch) // necessary query organiztionId;
 
 memberRouter.get('/:memberId', restrictTo(["all"]) , MemberController.getMemberById)
 memberRouter.post('/', restrictTo(["all"]) , MemberController.createMember) //organizationId as query  required if auth is admin
