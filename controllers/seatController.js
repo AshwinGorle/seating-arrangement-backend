@@ -342,7 +342,7 @@ class SeatController {
       if (!member) {
         throw new Error("Member not found.");
       }
-      if (!member.seat._id) {
+      if (!member?.seat?._id) {
         throw new Error("Member have not alloted any seat.");
       }
 
@@ -356,14 +356,14 @@ class SeatController {
       
       const seat = await SeatModel.findById(member.seat._id);
       if (!seat) throw new Error("Member's seat not found");
-      
+
       //seting seat of member null
       member.seat = null;
 
       //removing member from the curresponding shcedule of seat
       for (const key in seat?.schedule) {
-        if (seat.schedule[key].occupant.toString() == memberId.toString()) {
-          seat.schedule[key].occupant = null;
+        if (seat?.schedule[key]?.occupant?.toString() == memberId.toString()) {
+          seat?.schedule[key]?.occupant = null;
         }
       }
 
