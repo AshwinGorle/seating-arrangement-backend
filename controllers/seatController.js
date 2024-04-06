@@ -32,7 +32,7 @@ class SeatController {
         `organization schedule.morning.occupant schedule.noon.occupant schedule.evening.occupant schedule.fullDay.occupant`
       );
 
-      return res.send({
+      return res.status(200).send({
         status: "success",
         message: "Seats found based on the search criteria",
         data: seats,
@@ -40,7 +40,7 @@ class SeatController {
     } catch (err) {
       console.log("All seats fetching err : ", err);
 
-      res.send({
+      res.status(500).send({
         status: "failed",
         message: `${err.message}`,
       });
@@ -66,7 +66,7 @@ class SeatController {
         "organization schedule.morning.occupant schedule.noon.occupant schedule.evening.occupant schedule.fullDay.occupant"
       );
 
-      res.send({
+      res.status(200).send({
         status: "success",
         message: `All seats of ${organization.name}`,
         data: allSeats,
@@ -102,7 +102,7 @@ class SeatController {
         description,
         organization: organizationId,
       });
-      res.send({
+      res.status(201).send({
         status: "success",
         message: `Seat ${seat?.seatNumber} created successfully in ${organization?.name} organization`,
         data: seat,
@@ -115,7 +115,7 @@ class SeatController {
           message: "A organization can not have seats with same seat number",
         });
       } else {
-        res.send({ status: "failed", message: err.message });
+        res.status(500).send({ status: "failed", message: err.message });
       }
     }
   };
@@ -148,13 +148,13 @@ class SeatController {
 
       await SeatModel.insertMany(multipleSeats);
 
-      return res.send({
+      return res.status(201).send({
         status: "success",
         message: `seats from ${start} to ${end} added successfully `,
       });
     } catch (err) {
       console.log("multiple seat creation err : ", err);
-      return res.send({ status: "failed", message: `${err.message}` });
+      return res.status(500).send({ status: "failed", message: `${err.message}` });
     }
   };
 
@@ -181,7 +181,7 @@ class SeatController {
       await session.commitTransaction();
       await session.endSession();
 
-      res.send({
+      res.status(204).send({
         status: "success",
         message: `Seat ${seat.seatNumber} updated successfully`,
       });
@@ -244,7 +244,7 @@ class SeatController {
       await session.commitTransaction();
       await session.endSession();
 
-      res.send({
+      res.status(500).send({
         status: "success",
         message: `Seat ${seat.seatNumber} deleted successfully`,
       });

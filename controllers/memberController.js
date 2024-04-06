@@ -30,7 +30,7 @@ class MemberController {
       if (allMembers.length === 0) {
         throw new Error("No members found in this organization");
       }
-      res.send({
+      res.status(200).send({
         status: "success",
         message: `All members fetched successfully`,
         data: allMembers,
@@ -44,7 +44,7 @@ class MemberController {
   static getMemberById = async (req, res) => {
     const { memberId } = req.params;
     if (!memberId)
-      return res.send({
+      return res.status(400).send({
         status: "failed",
         message: "To get member memberId is required",
       });
@@ -60,14 +60,14 @@ class MemberController {
         member.organization,
         "You are not authorized to fetch this member"
       );
-      res.send({
+      res.status(200).send({
         status: "success",
         message: `user fetched successfully`,
         data: member,
       });
     } catch (err) {
       console.log("67 getMemberById err : ", err);
-      res.send({ status: "failed", message: `${err.message}` });
+      res.status(500).send({ status: "failed", message: `${err.message}` });
     }
   };
 
@@ -75,7 +75,7 @@ class MemberController {
     const { memberId } = req.params;
     const { name, phone, email, address } = req.body;
     if (!memberId)
-      return res.send({
+      return res.status(400).send({
         status: "failed",
         message: "To update  memberId is required",
       });
@@ -91,14 +91,14 @@ class MemberController {
         { name, email, phone, address },
         { new: true }
       );
-      res.send({
+      res.status(200).send({
         status: "success",
         message: `member (${member.name}) updated successfully`,
         data: updatedMember,
       });
     } catch (err) {
       console.log("69 updateMemberById err : ", err);
-      res.send({ status: "failed", message: `${err.message}` });
+      res.status(500).send({ status: "failed", message: `${err.message}` });
     }
   };
 
@@ -171,7 +171,7 @@ class MemberController {
       await session.commitTransaction();
       await session.endSession();
 
-      return res.send({
+      return res.status(201).send({
         status: "success",
         message: `Member added successfully with Account in ${organization.name} organization`,
         data: accountDetails,
@@ -187,19 +187,19 @@ class MemberController {
       if (err.code === 11000) {
         if (err.keyPattern && err.keyPattern.name && err.keyPattern.email) {
           // Both name and email are duplicated
-          return res.send({
+          return res.status(409).send({
             status: "failed",
             message: "Name and email already exist!",
           });
         } else if (err.keyPattern && err.keyPattern.name) {
           // Only name is duplicated
-          return res.send({
+          return res.status(409).send({
             status: "failed",
             message: "Name already exists!",
           });
         } else if (err.keyPattern && err.keyPattern.email) {
           // Only email is duplicated
-          return res.send({
+          return res.status(409).send({
             status: "failed",
             message: "Email already exists!",
           });
@@ -207,7 +207,7 @@ class MemberController {
       }
 
       // Sending error response
-      return res.send({ status: "failed", message: `${err.message}` });
+      return res.status(500).send({ status: "failed", message: `${err.message}` });
     }
   };
 
@@ -265,7 +265,7 @@ class MemberController {
 
       await session.commitTransaction();
       await session.endSession();
-      return res.send({
+      return res.status(200).send({
         status: "success",
         message: `Member and his Account deleted successfully! ${seatUpdateMessage}`,
         data: [deletedMember, deletedAcount],
@@ -274,7 +274,7 @@ class MemberController {
       await session.abortTransaction();
       await session.endSession();
       console.log("53 member deletion error: ", err.message);
-      return res.send({ status: "failed", message: `${err.message}` });
+      return res.status(500).send({ status: "failed", message: `${err.message}` });
     }
   };
 
@@ -303,7 +303,7 @@ class MemberController {
 
       const members = await MemberModel.find(query);
 
-      return res.send({
+      return res.status(200).send({
         status: "success",
         message: "Seats found based on the search criteria",
         data: members,
@@ -311,7 +311,7 @@ class MemberController {
     } catch (err) {
       console.log("All seats fetching err : ", err);
 
-      res.send({
+      res.status(500).send({
         status: "failed",
         message: `${err.message}`,
       });

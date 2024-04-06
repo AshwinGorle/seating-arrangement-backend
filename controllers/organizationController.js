@@ -5,14 +5,14 @@ class OrganizationController {
   static getAllOrganizations = async (req, res) => {
     try {
       const organizations = await OrganizationModel.find({});
-      return res.send({
+      return res.status(200).send({
         status: "success",
         message: "All Organizations fetched successfully!",
         data: organizations,
       });
     } catch (err) {
       console.log("54 organization fetchinf error : ", err);
-      return res.send({
+      return res.status(500).send({
         status: "failed",
         message: "Something went wrong ! organization not fetched.",
         err: err,
@@ -31,10 +31,9 @@ class OrganizationController {
         (req.user.role == "owner" && req.user.organization == organizationId)
       )
     ) {
-      return res.send({
+      return res.status(401).send({
         status: "failed",
-        message:
-          "you are not authorized to get user of this organization",
+        message: "you are not authorized to get user of this organization",
       });
     }
 
@@ -42,14 +41,14 @@ class OrganizationController {
       const organization = await OrganizationModel.findById(organizationId).populate('staff owner');
       if(!organization) throw new Error("Organization does not exists!");
       const dataToSend = role == "owner" ?  organization.owner : organization.staff;
-      return res.send({
+      return res.status(200).send({
         status : "success",
         message : `${role} fetched successfully`,
         data : dataToSend
       })
     }catch(err){
       console.log("60 getUserOfOrganization err : ", err);
-      return res.send({
+      return res.status(500).send({
         status: "failed",
         message: `${err.message}`,
       });
@@ -59,21 +58,21 @@ class OrganizationController {
   static createOrganization = async (req, res) => {
     const { name, address, description } = req.body;
     if (!name || !address)
-      return res.send({ status: "failed", message: "All fields are required" });
+      return res.status(400).send({ status: "failed", message: "All fields are required" });
     try {
       const organization = await OrganizationModel.create({
         name,
         address,
         description,
       });
-      return res.send({
+      return res.status(201).send({
         status: "success",
         message: "Organizationo created successfully!",
         data: organization,
       });
     } catch (err) {
-      console.log("52 organization creation error : ", err);
-      return res.send({
+        console.log("52 organization creation error : ", err);
+        return res.status(500).send({
         status: "failed",
         message: "Something went wrong ! organization not created",
         err: err,
@@ -92,7 +91,7 @@ class OrganizationController {
         (req.user.role == "owner" && req.user.organization == organizationId)
       )
     ) {
-      return res.send({
+      return res.status(200).send({
         status: "failed",
         message:
           "you are not authorized to update this organization",
@@ -103,7 +102,7 @@ class OrganizationController {
         const organization = await OrganizationModel.findById(organizationId);
         if(!organization) throw new Error("Organization does not exists!");
         const updateOrganization = await OrganizationModel.findByIdAndUpdate(organizationId, {name, description, address, logo, banner}, {new : true}) 
-        return res.send({
+        return res.status(200).send({
           status: "success",
           message:
             "Organization updated successfully!",
@@ -117,7 +116,7 @@ class OrganizationController {
             message: "Can't fetch provided details! please check and try again!",
           });
         }
-        return res.send({
+        return res.status(500).send({
           status : "failed",
           message : err.message ? err.message : "Error in updating the organization",
         })
@@ -128,21 +127,21 @@ class OrganizationController {
     try {
       const organization = await OrganizationModel.findById(organizationId);
       if (!organization)
-        return res.send({
+        return res.status(404).send({
           status: "failed",
           message: "Organization does not exits!",
         });
       const deletedOrganization = await OrganizationModel.findByIdAndDelete(
         organizationId
       );
-      return res.send({
+      return res.status(200).send({
         status: "success",
         message: "Organizationo deleted successfully!",
         data: deletedOrganization,
       });
     } catch (err) {
       console.log("organization deletion err ", err);
-      return res.send({
+      return res.status(500).send({
         status: "failed",
         message: "Something went wrong!, cant delete organization!",
       });
@@ -154,7 +153,7 @@ class OrganizationController {
   static addOwnerToOrganization = async (req, res) => {
     const { organizationId, ownerId } = req.body;
     if (!ownerId || !organizationId)
-      return res.send({
+      return res.status(400).send({
         status: "failed",
         message: "Can't add owner ! Owner Id and Organization Id is required!",
       });
@@ -204,7 +203,7 @@ class OrganizationController {
       await session.commitTransaction();
       await session.endSession();
 
-      return res.send({
+      return res.status(200).send({
         status: "success",
         message: `Owner added successfully! ${owner.name} (owner) added to ${organization.name} (organization)`,
         data: [updatedOrganization, updatedOwner],
@@ -216,7 +215,7 @@ class OrganizationController {
       console.log("55 addOwnerToOrganization err :", err);
 
       if (err.name === "CastError" && err.kind === "ObjectId") {
-        return res.status(404).send({
+          return res.status(404).send({
           status: "failed",
           message: "Can't fetch provided details! please check and try again!",
         });
@@ -231,7 +230,7 @@ class OrganizationController {
   static deleteOwnerFromOrganization = async (req, res) => {
     const { organizationId, ownerId } = req.body;
     if (!ownerId || !organizationId)
-      return res.send({
+      return res.status(400).send({
         status: "failed",
         message:
           "Can't delete owner ! Owner Id and Organization Id is required!",
@@ -263,7 +262,7 @@ class OrganizationController {
        
        await session.commitTransaction();
        await session.endSession(); 
-      return res.send({
+       return res.status(200).send({
         status: "success",
         message: "Owner deleted successfully!",
         description: `Owner ${owner.name} deleted from ${organization.name} organization`,
@@ -369,7 +368,7 @@ class OrganizationController {
   static deleteStaffFromOrganization = async (req, res) => {
     const { organizationId, staffId } = req.body;
     if (!staffId || !organizationId)
-      return res.send({
+        return res.status(400).send({
         status: "failed",
         message:
           "Can't delete staff ! Staff Id and Organization Id is required!",
@@ -380,7 +379,7 @@ class OrganizationController {
         (req.user.role == "owner" && req.user.organization == organizationId)
       )
     ) {
-      return res.send({
+      return res.status(401).send({
         status: "failed",
         message:
           "you are not authorized to delete staff from this organization",
@@ -419,7 +418,7 @@ class OrganizationController {
 
       await session.commitTransaction();
       await session.endSession();
-      return res.send({
+      return res.status(200).send({
         status: "success",
         message: "Staff deleted successfully!",
         description: `Staff ${staff.name} deleted from ${organization.name} organization`,

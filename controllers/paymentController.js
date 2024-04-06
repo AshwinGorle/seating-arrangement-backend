@@ -13,8 +13,7 @@ class PaymentController {
       const member = await  MemberModel.findById(memberId).populate('payments account');
       if(!member) throw new Error("Member not found!");
       authorizeActionInOrganization(req.user,member.organization,"You are not authorized to get payment of this member!");
-
-      res.send({
+      res.status(200).send({
         status : "success",
         message : "Payments and Account of member successfully!",
         data: [member.payments, member.account]
@@ -27,34 +26,36 @@ class PaymentController {
         message: err.message,
       });
     }
-  };
+};
 
-  static getAllPayment = async (req, res) => {
-    try {
-      const organizationId = getRequiredOrganizationId(
-        req,
-        "Admin require organizationId to fetch all payments"
-      );
-      const organization = await OrganizationModel.findById(organizationId);
-      if (!organization)
-        throw new Error("To get all payment organization Id is required");
-      const payments = await PaymentModel.find({
-        organization: organizationId,
-      }).populate("paidBy");
 
-      res.send({
-        status: "success",
-        message: "All payment fetched successfully!",
-        data: payments,
-      });
-    } catch (err) {
-      console.error("Error fetching all payment:", err);
-      res.status(500).send({
-        status: "failed",
-        message: err.message,
-      });
-    }
-  };
+static getAllPayment = async (req, res) => {
+  try {
+    const organizationId = getRequiredOrganizationId(
+      req,
+      "Admin require organizationId to fetch all payments"
+    );
+    const organization = await OrganizationModel.findById(organizationId);
+    if (!organization)
+      throw new Error("To get all payment organization Id is required");
+    const payments = await PaymentModel.find({
+      organization: organizationId,
+    }).populate("paidBy");
+
+    res.status(200).send({
+      status: "success",
+      message: "All payment fetched successfully!",
+      data: payments,
+    });
+  } catch (err) {
+    console.error("Error fetching all payment:", err);
+    res.status(500).send({
+      status: "failed",
+      message: err.message,
+    });
+  }
+};
+
   static getPaymentById = async (req, res) => {
     try {
       const { paymentId } = req.params;
@@ -73,7 +74,7 @@ class PaymentController {
       }
 
       // Send the payment data in the response
-      res.send({
+      res.status(200).send({
         status: "success",
         data: payment,
       });
@@ -133,7 +134,7 @@ class PaymentController {
       await session.commitTransaction();
       await session.endSession();
 
-      return res.send({
+      return res.status(201).send({
         status: "success",
         message: "Payment made successfully",
         data: [member, payment],
@@ -144,7 +145,7 @@ class PaymentController {
       await session.endSession();
 
       console.log("makePayment error:", err);
-      return res.send({ status: "failed", message: `${err.message}` });
+      return res.status(500).send({ status: "failed", message: `${err.message}` });
     }
   };
 
@@ -203,7 +204,7 @@ class PaymentController {
       await session.endSession();
 
       // Send the updated payment data in the response
-      res.send({
+      res.status(200).send({
         status: "success",
         message: "Payment and curresponding Account updated successfully",
         data: [payment, member.account],
@@ -270,12 +271,12 @@ class PaymentController {
       await session.endSession();
 
       // Send the updated payment data in the response
-      res.send({
+      res.status(200).send({
         status: "success",
         message:
           "Payment Deleted and curresponding Account Updated successfully",
         data: [payment, member.account],
-      });
+      }); 
     } catch (err) {
       await session.abortTransaction();
       await session.endSession();
