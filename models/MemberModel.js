@@ -39,6 +39,12 @@ const memberSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Seat",
   },
+  lockers: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Locker",
+    },
+  ],
   payments: [
     {
       type: mongoose.Schema.Types.ObjectId,

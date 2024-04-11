@@ -231,18 +231,18 @@ class MemberController {
       );
 
       //removing the currently deleting member from the seat's curresponding shcedule there this member is occupant
-      const seatUpdateMessage = "";
+      let seatUpdateMessage = "";
       if (member.seat != null) {
         const seat = await SeatModel.findById(member.seat).session(session);
         if (seat) {
           for (const key in seat.schedule) {
             if (
-              seat.schedule[key].occupant.toString() == member._id.toString()
+              seat.schedule[key].occupant?.toString() == member._id?.toString()
             ) {
               seat.schedule[key].occupant = null;
               seatUpdateMessage += `The member ocupies seat No. (${seat.seatNumber} - ${key}) so updated while deleting member`;
             }
-            await seat.save().session(session);
+            await seat.save({session});
           }
         }
       }

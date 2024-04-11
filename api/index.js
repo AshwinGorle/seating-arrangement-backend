@@ -13,6 +13,8 @@ import accountRouter from '../routes/accountRouter.js';
 import paymentRouter from '../routes/paymentRouter.js';
 import AuthController from '../controllers/authController.js';
 import scheduleRouter from '../routes/scheduleRouter.js';
+import lokerRouter from '../routes/lokerRouter.js';
+import staffRouter from '../routes/staffRouter.js';
 
 
 
@@ -42,12 +44,14 @@ app.use(checkForAuth);
 
 app.get('/',AuthController.homefunction);
 app.use('/api/v1/auth', authRouter)
-app.use('/api/v1/member',memberRouter)
+app.use('/api/v1/member',memberRouter);
+app.use('/api/v1/staff',staffRouter);
 app.use('/api/v1/organization',organizationRouter)
 app.use('/api/v1/seat/',seatRouter)
 app.use('/api/v1/account/', accountRouter);
 app.use('/api/v1/payment/', paymentRouter);
 app.use('/api/v1/schedule/', scheduleRouter);
+app.use('/api/v1/loker',lokerRouter);
 
 app.use('/testing', testingRouter );
 

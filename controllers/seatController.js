@@ -121,7 +121,7 @@ class SeatController {
   };
 
   static createMultipleSeats = async (req, res) => {
-    const { start, end } = req.query;
+    const { start, end } = req.body;
     const noOfSeats = end - start + 1;
     try {
       if (!start) throw new Error("No of seats should be provided");
