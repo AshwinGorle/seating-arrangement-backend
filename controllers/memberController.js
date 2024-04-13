@@ -26,7 +26,7 @@ class MemberController {
       }
       const allMembers = await MemberModel.find({
         organization: organizationId,
-      }).populate('account');
+      }).populate('account seat');
       if (allMembers.length === 0) {
         throw new Error("No members found in this organization");
       }
