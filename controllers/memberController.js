@@ -11,8 +11,9 @@ import PaymentModel from "../models/PaymentModel.js";
 class MemberController {
   static getAllMemberByOrganizationId = async (req, res) => {
     // Validate organizationId
-  try {
-      const  organizationId = getRequiredOrganizationId(req, "admin requires organization Id to fetch all members")
+    console.log('get members')
+    try {
+      const organizationId = getRequiredOrganizationId(req, "admin requires organization Id to fetch all members")
       // Authorization check
       authorizeActionInOrganization(
         req.user,
@@ -26,10 +27,11 @@ class MemberController {
       }
       const allMembers = await MemberModel.find({
         organization: organizationId,
-      }).populate('account seat');
+      }).select('name membershipStatus').populate('account', 'balance').populate('seat', 'seatNumber').sort({ createdAt: -1 }).limit(10);
       if (allMembers.length === 0) {
         throw new Error("No members found in this organization");
       }
+      console.log(allMembers);
       res.status(200).send({
         status: "success",
         message: `All members fetched successfully`,
@@ -55,8 +57,8 @@ class MemberController {
       if (!member) throw new Error("No member found  with this id");
 
       //Authorization check
-      console.log("user organization :",req.user.organization);
-      console.log("member organization :",member.organization);
+      console.log("user organization :", req.user.organization);
+      console.log("member organization :", member.organization);
       authorizeActionInOrganization(
         req.user,
         member.organization._id,
@@ -86,7 +88,7 @@ class MemberController {
       if (!member) throw new Error("No member found  with this id");
 
       //Authorization check
-      authorizeActionInOrganization(req.user, member.organization ,"You are not authorized to Update this member")
+      authorizeActionInOrganization(req.user, member.organization, "You are not authorized to Update this member")
 
       const updatedMember = await MemberModel.findByIdAndUpdate(
         memberId,
@@ -242,21 +244,21 @@ class MemberController {
               seat.schedule[key].occupant = null;
               seatUpdateMessage += `The member ocupies seat No. (${seat.seatNumber} - ${key}) so updated while deleting member`;
             }
-            await seat.save({session});
+            await seat.save({ session });
           }
         }
       }
-      
+
       //deleting the acount of currently deleting member.
 
       const deletedAcount = await AccountModel.findByIdAndDelete(
         member.account
       ).session(session);
-      
+
       // deleteing the payment made by the currently deleting member.
-      
-      for( let i=0; i<member.payments.length; i++){
-         await PaymentModel.findByIdAndDelete(member.payments[i]).session(session); 
+
+      for (let i = 0; i < member.payments.length; i++) {
+        await PaymentModel.findByIdAndDelete(member.payments[i]).session(session);
       }
 
       const deletedMember = await MemberModel.findByIdAndDelete(
@@ -280,28 +282,28 @@ class MemberController {
     }
   };
 
-  static memberSearch = async (req, res)=>{
-     /* querie params
-        membershipStatus  : 'active' || 'inactive' || expired,
+  static memberSearch = async (req, res) => {
+    /* querie params
+       membershipStatus  : 'active' || 'inactive' || expired,
 
-     */
+    */
     console.log("member search called -----")
-  
+
     try {
-      const { membershipStatus ="expired" } = req.query;
-      
+      const { membershipStatus = "expired" } = req.query;
+
       const organizationId = getRequiredOrganizationId(req, "Admin requires organization id to search members");
       const organization = await OrganizationModel.findById(organizationId);
       if (!organization) {
         throw new Error("Invalid organization Id is required to get seats");
       }
-      const query = { 
-        organization : organizationId 
+      const query = {
+        organization: organizationId
       };
-      
-       query[`membershipStatus`] = membershipStatus;
-       console.log("query--------",query)
-      
+
+      query[`membershipStatus`] = membershipStatus;
+      console.log("query--------", query)
+
 
       const members = await MemberModel.find(query);
 
