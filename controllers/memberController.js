@@ -11,8 +11,10 @@ import PaymentModel from "../models/PaymentModel.js";
 class MemberController {
   static getAllMemberByOrganizationId = async (req, res) => {
     // Validate organizationId
-    console.log('get members')
     try {
+      const { pageNumber = 1 } = req.params;
+      const perPage = 10;
+      const skip = (pageNumber - 1) * 10;
       const organizationId = getRequiredOrganizationId(req, "admin requires organization Id to fetch all members")
       // Authorization check
       authorizeActionInOrganization(
@@ -27,15 +29,17 @@ class MemberController {
       }
       const allMembers = await MemberModel.find({
         organization: organizationId,
-      }).select('name membershipStatus').populate('account', 'balance').populate('seat', 'seatNumber').sort({ createdAt: -1 }).limit(10);
+      }).select('name membershipStatus').populate('account', 'balance').populate('seat', 'seatNumber').skip(skip).sort({ createdAt: -1 }).limit(perPage);
       if (allMembers.length === 0) {
         throw new Error("No members found in this organization");
       }
-      console.log(allMembers);
+      const totalMembers = await MemberModel.countDocuments({ organization: organizationId });
+
+      console.log(allMembers, totalMembers);
       res.status(200).send({
         status: "success",
         message: `All members fetched successfully`,
-        data: allMembers,
+        data: { allMembers, totalMembers },
       });
     } catch (err) {
       console.log("67 getAllMemberByOrganizationId error: ", err.message);
