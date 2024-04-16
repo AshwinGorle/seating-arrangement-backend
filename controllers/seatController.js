@@ -13,19 +13,19 @@ class SeatController {
         - status: Vacant, Occupied (default: Vacant)
         */
     try {
-      const { schedule="fullDay", status="vacant" } = req.query;
-      
+      const { schedule = "fullDay", status = "vacant" } = req.query;
+
       const organizationId = getRequiredOrganizationId(req, "Admin requires organization id to search seats");
       const organization = await OrganizationModel.findById(organizationId);
       if (!organization) {
         throw new Error("Invalid organization Id is required to get seats");
       }
 
-      const query = { 
-        organization : organizationId 
+      const query = {
+        organization: organizationId
       };
       if (schedule) {
-          query[`schedule.${schedule}.occupant`] = (status == "occupied") ?  { $ne: null } : null;
+        query[`schedule.${schedule}.occupant`] = (status == "occupied") ? { $ne: null } : null;
       }
 
       const seats = await SeatModel.find(query).populate(
@@ -49,7 +49,7 @@ class SeatController {
 
   static getAllSeats = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+
     try {
       //checking if admin is hiting the route then organizationId is required as query params.
       const requiredOrganizationId = getRequiredOrganizationId(
@@ -244,7 +244,7 @@ class SeatController {
       await session.commitTransaction();
       await session.endSession();
 
-      res.status(500).send({
+      res.status(200).send({
         status: "success",
         message: `Seat ${seat.seatNumber} deleted successfully`,
       });
@@ -342,7 +342,7 @@ class SeatController {
       if (!member) {
         throw new Error("Member not found.");
       }
-      
+
       if (!member?.seat?._id) {
         throw new Error("Member have not alloted any seat.");
       }
@@ -354,7 +354,7 @@ class SeatController {
         "You are not authorized to de_allocate the seat of this member"
       );
 
-      
+
       const seat = await SeatModel.findById(member.seat._id);
       if (!seat) throw new Error("Member's seat not found");
 
