@@ -29,7 +29,7 @@ class MemberController {
       }
       const allMembers = await MemberModel.find({
         organization: organizationId,
-      }).select('name membershipStatus').populate('account', 'balance').populate('seat', 'seatNumber').skip(skip).sort({ createdAt: -1 }).limit(perPage);
+      }).select('name membershipStatus').populate('account', 'balance').populate('seat', 'seatNumber')
       if (allMembers.length === 0) {
         throw new Error("No members found in this organization");
       }

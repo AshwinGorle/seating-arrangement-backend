@@ -14,7 +14,7 @@ class SeatController {
         */
     try {
       const { schedule="fullDay", status="vacant" } = req.query;
-      const { includeMorning, includeNoon, includeEvening } = req.query;
+      
       const organizationId = getRequiredOrganizationId(req, "Admin requires organization id to search seats");
       const organization = await OrganizationModel.findById(organizationId);
       if (!organization) {
