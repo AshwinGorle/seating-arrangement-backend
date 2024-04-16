@@ -52,7 +52,7 @@ class MemberController {
       });
     try {
       const member = await MemberModel.findById(memberId).populate(
-        "organization account seat"
+        "organization account seat payments lockers"
       );
       if (!member) throw new Error("No member found  with this id");
 
