@@ -5,7 +5,7 @@ const memberRouter = express.Router();
 
 
 //protected route
-memberRouter.get('/:pageNumber', restrictTo(["all"]), MemberController.getAllMemberByOrganizationId) // necessary query organiztionId;
+memberRouter.get('/', restrictTo(["all"]), MemberController.getAllMemberByOrganizationId) // necessary query organiztionId;
 memberRouter.get('/search', restrictTo(["all"]), MemberController.memberSearch) // necessary query organiztionId;
 
 memberRouter.get('/details/:memberId', restrictTo(["all"]), MemberController.getMemberById)
