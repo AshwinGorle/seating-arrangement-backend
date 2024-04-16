@@ -108,7 +108,7 @@ class MemberController {
 
   static createMember = async (req, res) => {
     // Extracting required fields from request body
-    const { name, phone, email, address, preparation, monthlySeatFee } =
+    const { name, phone, email, address, preparation, gender, monthlySeatFee } =
       req.body;
 
     const session = await mongoose.startSession();
@@ -120,6 +120,7 @@ class MemberController {
         !name ||
         !phone ||
         !email ||
+        !gender ||
         !address ||
         !preparation ||
         !monthlySeatFee
@@ -154,6 +155,7 @@ class MemberController {
             phone,
             email,
             address,
+            gender,
             preparation,
             monthlySeatFee,
             organization: organizationId,

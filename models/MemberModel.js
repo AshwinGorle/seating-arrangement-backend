@@ -27,6 +27,10 @@ const memberSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  gender : {
+    type :  String,
+    enum : ["M", "F", "O"]
+  },
   membershipStatus: {
     type: String,
     enum: ["active", "inactive", "expired"],
