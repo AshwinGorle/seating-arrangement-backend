@@ -136,15 +136,18 @@ export async function generateWeeklyPDFReportPuppeteer(req, res) {
       <head>
       <style>
       /* Add your CSS styles here */
+      *{
+      margin: 0;
+      }
       body {
       font-family: Arial, sans-serif;
-      margin: 40px;
       background-color: #f2f2f2;
       }
       .report-title {
       font-size: 40px;
       text-align: center;
       text-decoration: underline;
+      margin-top: 20px;
       margin-bottom: 20px;
       color: #333;
       }
@@ -154,11 +157,11 @@ export async function generateWeeklyPDFReportPuppeteer(req, res) {
       color: #555;
       }
       .data {
-      margin-left: 40px;
+      
       color: #777;
       }
       .member-list {
-      margin-left: 60px;
+      
       color: #777;
       }
       .member-list ul {
@@ -193,29 +196,29 @@ export async function generateWeeklyPDFReportPuppeteer(req, res) {
       margin-bottom: 20px;
       }
       .joining-section {
-     
+      
       padding: 10px;
       margin-bottom: 20px;
       }
       .organization-details {
       display: flex;
-      margin-bottom: 20px;
+      margin: 0;
       justify-content: center;
       flex-direction: column;
       align-items: center;
       width: 100%;
-      background-color: #f2f2f2;
-      padding: 10px;
-      border-bottom: 2px dashed black;
+      background-color: #3b5998;
+      padding-bottom: 10px;
+      border-bottom: 2px solid black;
       }
       .organization-name {
       font-size: 45px;
+      color: #fff;
       font-weight: bold;
-      color: #1877F2;
       text-transform: uppercase;
       }
       .organization-address {
-      color: #888;
+      color: #f5f5f5;
       text-transform: lowercase;
       }
       .summary-table {
