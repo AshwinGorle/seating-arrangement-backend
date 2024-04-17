@@ -88,17 +88,40 @@ export async function generateFeeReportExcel(req, res) {
 
         // Create Excel workbook
         const workbook = new exceljs.Workbook();
-        const worksheet = workbook.addWorksheet('Fee Report');
 
-        // Add fee report data to worksheet
-        worksheet.columns = [{ header: 'Member', key: 'member' }];
-
+        // Add worksheets for each period
         Object.entries(feeReportData).forEach(([period, members]) => {
-            worksheet.addRow([`Period ${period}`]);
+            const worksheet = workbook.addWorksheet(period);
+
+            // Add headers
+            worksheet.columns = [
+                { header: 'Member', key: 'member', width: 20, style: { font: { bold: true } } },
+                { header: 'Email', key: 'email', width: 30, style: { font: { bold: true } } },
+                { header: 'Phone', key: 'phone', width: 15, style: { font: { bold: true } } },
+                { header: 'Address', key: 'address', width: 40, style: { font: { bold: true } } },
+                // Add more columns as needed
+            ];
+
+            // Add member details
             members.forEach(member => {
-                worksheet.addRow([`${member.name} (${member.email})`]);
+                worksheet.addRow([
+                    member.name,
+                    member.email,
+                    member.phone,
+                    member.address,
+                    // Add more member details as needed
+                ]);
             });
-            worksheet.addRow([]); // Add empty row between periods
+
+            // Autosize columns
+            worksheet.columns.forEach(column => {
+                column.width = Math.max(column.width, 15);
+            });
+
+            // Set header row style to bold
+            worksheet.getRow(1).eachCell(cell => {
+                cell.font = { bold: true };
+            });
         });
 
         // Generate Excel file

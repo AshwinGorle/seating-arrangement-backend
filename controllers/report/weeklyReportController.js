@@ -200,6 +200,8 @@ async function generateReportData(organizationId) {
     createdAt: { $gte: startOfWeek.toDate(), $lte: endOfWeek.toDate() }
   });
 
+  // console.log(startOfWeek.toDate(), endOfWeek.toDate());
+
   // Query members leaving this week for the given organization
   const membersLeavingThisWeek = await MemberModel.find({
     organization: organizationId,
