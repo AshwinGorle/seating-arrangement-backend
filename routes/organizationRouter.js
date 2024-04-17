@@ -4,6 +4,7 @@ import restrictTo from '../middlewares/restrictTo.js';
 const organizationRouter = express.Router();
 
 organizationRouter.get("/", restrictTo(["admin"]) ,OrganizationController.getAllOrganizations);
+organizationRouter.get("/:organizationId", restrictTo(["admin", "owner"]) ,OrganizationController.getOrganizationById);
 organizationRouter.post("/", restrictTo(["admin"]) ,OrganizationController.createOrganization);
 organizationRouter.put("/:organizationId", restrictTo(["admin", "owner"]) ,OrganizationController.updateOrganization);
 

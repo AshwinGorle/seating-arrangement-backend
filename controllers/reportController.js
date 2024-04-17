@@ -1,15 +1,16 @@
 import moment from 'moment';
 import PDFDocument from 'pdfkit';
-import csv from 'csv-writer';
 import { PassThrough } from 'stream';
-import fs from 'fs';
 import exceljs from 'exceljs';
 import MemberModel from '../models/MemberModel.js'; 
 import PaymentModel from '../models/PaymentModel.js'; 
+import OrganizationModel from '../models/OrganizationModel.js';
 
+// Function to generate the weekly report
 export async function generateWeeklyReport(req, res) {
+  const { organizationId } = req.params; // Extract organization ID from request parameters
   try {
-    const reportData = await generateReportData();
+    const reportData = await generateReportData(organizationId); // Pass organization ID to the data generation function
 
     // Respond with JSON data
     res.json(reportData);
@@ -19,9 +20,11 @@ export async function generateWeeklyReport(req, res) {
   }
 }
 
+// Function to generate the weekly PDF report
 export async function generateWeeklyPDFReport(req, res) {
+  const { organizationId } = req.params; // Extract organization ID from request parameters
   try {
-    const reportData = await generateReportData();
+    const reportData = await generateReportData(organizationId); // Pass organization ID to the data generation function
 
     // Create a PassThrough stream
     const stream = new PassThrough();
@@ -32,12 +35,47 @@ export async function generateWeeklyPDFReport(req, res) {
 
     // Set PDF metadata
     doc.info.Title = 'Weekly Report';
+    
+        // // Add organization details
+        // if (reportData.organization) {
+        //   doc.fontSize(25).text(`----${reportData.organization.name}----`, {align:'center',underline:true}).moveDown(0);
+        //   doc.fontSize(13).text(`${reportData.organization.address}`,{align:'center'}).moveDown(1.4);
+        //   // Add more organization details as needed
+        // }
+
+        // Define a function to add organization details as the header
+        const addOrganizationDetailsHeader = () => {
+          // Add organization details
+          if (reportData.organization) {
+            const headerHeight = 50; // Height of the header block
+            const headerMargin = 10; // Margin between header block and top of the page
+        
+            // Draw a rectangle to create a header block
+            // doc.rect(0, headerMargin, doc.page.width, headerHeight).fill('#dddddd');
+        
+            // Add header text
+            doc.fontSize(25).text(`----${reportData.organization.name}----`, { align: 'center', underline: true  }).moveDown(0);
+            doc.fontSize(13).text(`${reportData.organization.address}`, { align: 'center' }).moveDown(1.4);
+          }
+        };
+
+// Listen for the 'pageAdded' event and add the header to each page
+doc.on('pageAdded', () => {
+  doc.switchToPage(doc.bufferedPageRange().count); // Switch to the newly added page
+  addOrganizationDetailsHeader(); // Add organization details as the header
+});
+
+// Add the organization details header to the first page
+addOrganizationDetailsHeader();
+
 
     // Add report title
-    doc.fontSize(24).text('Weekly Report', { align: 'center', underline: true }).moveDown();
+    doc.fontSize(23).text('Weekly Report', { align: 'center', underline: true }).moveDown();
 
-    // Add border around each page
-    doc.rect(0, 0, doc.page.width, doc.page.height).stroke();
+    doc.rect(10, 10, doc.page.width - 20, doc.page.height - 20).stroke();
+    doc.on('pageAdded', () => {
+      doc.rect(10, 10, doc.page.width - 20, doc.page.height - 20).stroke();
+    });
 
     // Add report data
     doc.fontSize(16).text(`Total Members Joining This Week: ${reportData.totalMembersJoiningThisWeek}`).moveDown();
@@ -46,6 +84,7 @@ export async function generateWeeklyPDFReport(req, res) {
     doc.fontSize(16).text(`Total Overdue Payments This Week: ${reportData.totalOverduePaymentsThisWeek}`).moveDown();
     
     doc.moveDown(1);
+
 
     // Add members leaving this week
     if (reportData.membersLeavingThisWeek.length > 0) {
@@ -85,14 +124,23 @@ export async function generateWeeklyPDFReport(req, res) {
   }
 }
 
-
+// Function to generate the weekly Excel report
 export async function generateWeeklyExcelReport(req, res) {
+  const { organizationId } = req.params; // Extract organization ID from request parameters
   try {
-    const reportData = await generateReportData();
+    const reportData = await generateReportData(organizationId); // Pass organization ID to the data generation function
 
     // Create a new workbook
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet('Weekly Report');
+
+    // Add organization details to the worksheet
+    if (reportData.organization) {
+      worksheet.addRow(['Organization Name:', reportData.organization.name]);
+      worksheet.addRow(['Organization Address:', reportData.organization.address]);
+      // Add more organization details as needed
+      worksheet.addRow([]); // Add an empty row for separation
+    }
 
     // Add report headers
     worksheet.addRow(['Weekly Report']).font = { bold: true, size: 16 };
@@ -143,34 +191,43 @@ export async function generateWeeklyExcelReport(req, res) {
   }
 }
 
-async function generateReportData() {
+// Function to generate report data
+async function generateReportData(organizationId) {
+  // Fetch organization details
+  const organization = await OrganizationModel.findById(organizationId);
+
   const today = moment();
   const startOfWeek = moment().startOf('week');
   const endOfWeek = moment().endOf('week');
 
-  // Query members joining this week
+  // Query members joining this week for the given organization
   const membersJoiningThisWeek = await MemberModel.find({
+    organization: organizationId,
     createdAt: { $gte: startOfWeek.toDate(), $lte: endOfWeek.toDate() }
   });
 
-  // Query members leaving this week
+  // Query members leaving this week for the given organization
   const membersLeavingThisWeek = await MemberModel.find({
+    organization: organizationId,
     updatedAt: { $gte: startOfWeek.toDate(), $lte: endOfWeek.toDate() },
     membershipStatus: 'expired'
   });
 
-  // Query payments received this week
+  // Query payments received this week for the given organization
   const paymentsReceivedThisWeek = await PaymentModel.find({
+    organization: organizationId,
     createdAt: { $gte: startOfWeek.toDate(), $lte: today.toDate() }
   });
 
-  // Query overdue payments this week
+  // Query overdue payments this week for the given organization
   const overduePaymentsThisWeek = await PaymentModel.find({
+    organization: organizationId,
     createdAt: { $lt: startOfWeek.toDate() },
     isReceived: false
   });
 
   return {
+    organization,
     totalMembersJoiningThisWeek: membersJoiningThisWeek.length,
     totalMembersLeavingThisWeek: membersLeavingThisWeek.length,
     totalPaymentsReceivedThisWeek: paymentsReceivedThisWeek.reduce((total, payment) => total + payment.amount, 0),

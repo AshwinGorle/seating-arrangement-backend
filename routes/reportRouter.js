@@ -4,10 +4,11 @@ import { generateWeeklyReport, generateWeeklyPDFReport, generateWeeklyExcelRepor
 const router = express.Router();
 
 // Route to generate weekly report in JSON format
-router.get('/weekly', generateWeeklyReport);
+router.get('/weekly/:organizationId', generateWeeklyReport);
 
 // Route to generate weekly report in PDF format
-router.get('/weekly/pdf', generateWeeklyPDFReport);
+router.get('/weekly-pdf/:organizationId', generateWeeklyPDFReport);
 
-router.get('/weekly/excel', generateWeeklyExcelReport);
+// Route to generate weekly report in Excel format
+router.get('/weekly-excel/:organizationId', generateWeeklyExcelReport);
 export default router;
