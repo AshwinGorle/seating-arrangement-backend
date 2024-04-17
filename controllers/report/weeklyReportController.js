@@ -127,12 +127,12 @@ export async function generateWeeklyPDFReportPuppeteer(req, res) {
 
   try {
     const reportData = await generateReportData(organizationId);
-
+    // console.log(reportData);
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
     await page.setContent(`
       <!DOCTYPE html>
-      <html>
+      <html></html>
       <head>
       <style>
       /* Add your CSS styles here */
@@ -184,33 +184,90 @@ export async function generateWeeklyPDFReportPuppeteer(req, res) {
       margin-bottom: 20px;
       }
       .summary-section {
-      background-color: #f9f9f9;
       padding: 10px;
       margin-bottom: 20px;
       }
       .leaving-section {
-      background-color: #f2f2f2;
+      
       padding: 10px;
       margin-bottom: 20px;
       }
       .joining-section {
-      background-color: #e9e9e9;
+     
       padding: 10px;
       margin-bottom: 20px;
+      }
+      .organization-details {
+      display: flex;
+      margin-bottom: 20px;
+      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      background-color: #f2f2f2;
+      padding: 10px;
+      border-bottom: 2px dashed black;
+      }
+      .organization-name {
+      font-size: 45px;
+      font-weight: bold;
+      color: #1877F2;
+      text-transform: uppercase;
+      }
+      .organization-address {
+      color: #888;
+      text-transform: lowercase;
+      }
+      .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      }
+      .summary-table th {
+      background-color: #b3d9ff;
+      }
+      .summary-table td:nth-child(even) {
+      background-color: #e6f2ff;
+      }
+      .summary-table td:nth-child(odd) {
+      background-color: #f2f2f2;
+      }
+      .summary-table tr:nth-child(even) {
+      background-color: #e6f2ff;
+      }
+      .summary-table tr:nth-child(odd) {
+      background-color: #ffffff;
       }
       </style>
       </head>
       <body>
+      <div class="organization-details">
+      <div class="organization-name">${reportData.organization.name}</div>
+      <div class="organization-address">${reportData.organization.address}</div>
+      </div>  
+      </div>
       <div class="report-title">Weekly Report</div>
       
       <div class="summary-section">
       <div class="section-title">Summary:</div>
-      <div class="data">
-      <p>Total Members Joining This Week: ${reportData.totalMembersJoiningThisWeek}</p>
-      <p>Total Members Leaving This Week: ${reportData.totalMembersLeavingThisWeek}</p>
-      <p>Total Payments Received This Week: ${reportData.totalPaymentsReceivedThisWeek}</p>
-      <p>Total Overdue Payments This Week: ${reportData.totalOverduePaymentsThisWeek}</p>
-      </div>
+      <table class="summary-table">
+      
+      <tr>
+      <td>Total Members Joining This Week:</td>
+      <td>${reportData.totalMembersJoiningThisWeek}</td>
+      </tr>
+      <tr>
+      <td>Total Members Leaving This Week:</td>
+      <td>${reportData.totalMembersLeavingThisWeek}</td>
+      </tr>
+      <tr>
+      <td>Total Payments Received This Week:</td>
+      <td>${reportData.totalPaymentsReceivedThisWeek}</td>
+      </tr>
+      <tr>
+      <td>Total Overdue Payments This Week:</td>
+      <td>${reportData.totalOverduePaymentsThisWeek}</td>
+      </tr>
+      </table>
       </div>
       
       <div class="leaving-section">
@@ -218,13 +275,15 @@ export async function generateWeeklyPDFReportPuppeteer(req, res) {
       <div class="member-list">
       <table>
       <tr>
-        <th>Name</th>
-        <th>Email</th>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Phone</th>
       </tr>
-      ${reportData.membersLeavingThisWeek.map(member => `
-      <tr>
-        <td>${member.name}</td>
-        <td>${member.email}</td>
+      ${reportData.membersLeavingThisWeek.map((member, index) => `
+      <tr style="background-color: ${index % 2 === 0 ? '#e6f2ff' : '#ffffff'};">
+      <td>${member.name}</td>
+      <td>${member.email}</td>
+      <td>${member.phone}</td>
       </tr>
       `).join('')}
       </table>
@@ -236,13 +295,15 @@ export async function generateWeeklyPDFReportPuppeteer(req, res) {
       <div class="member-list">
       <table>
       <tr>
-        <th>Name</th>
-        <th>Email</th>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Phone</th>
       </tr>
-      ${reportData.membersJoiningThisWeek.map(member => `
-      <tr>
-        <td>${member.name}</td>
-        <td>${member.email}</td>
+      ${reportData.membersJoiningThisWeek.map((member, index) => `
+      <tr style="background-color: ${index % 2 === 0 ? '#e6f2ff' : '#ffffff'};">
+      <td>${member.name}</td>
+      <td>${member.email}</td>
+      <td>${member.phone}</td>
       </tr>
       `).join('')}
       </table>
@@ -252,23 +313,7 @@ export async function generateWeeklyPDFReportPuppeteer(req, res) {
       </html>
     `);
 
-    // Add organization details as the header on each page
-    await page.evaluate(() => {
-      const organizationName = 'Your Organization Name'; // Replace with the actual organization name
-      const organizationAddress = 'Your Organization Address'; // Replace with the actual organization address
-      
-      const header = document.createElement('div');
-      header.style.textAlign = 'center';
-      header.style.marginBottom = '20px';
-      header.innerHTML = `<h1>${organizationName}</h1><p>${organizationAddress}</p>`;
-      
-      const pages = document.querySelectorAll('.page');
-      pages.forEach(page => {
-      page.insertBefore(header.cloneNode(true), page.firstChild);
-      });
-    });
-
-    const pdfBuffer = await page.pdf({ format: 'A4' });
+    const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true,});
 
     await browser.close();
 
@@ -397,10 +442,12 @@ async function generateReportData(organizationId) {
     membersLeavingThisWeek: membersLeavingThisWeek.map(member => ({
       name: member.name,
       email: member.email,
+      phone: member.phone,
     })),
     membersJoiningThisWeek: membersJoiningThisWeek.map(member => ({
       name: member.name,
       email: member.email,
+      phone: member.phone,
     }))
   };
 }
