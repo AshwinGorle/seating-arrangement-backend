@@ -2,9 +2,9 @@ import moment from 'moment';
 import PDFDocument from 'pdfkit';
 import { PassThrough } from 'stream';
 import exceljs from 'exceljs';
-import MemberModel from '../models/MemberModel.js'; 
-import PaymentModel from '../models/PaymentModel.js'; 
-import OrganizationModel from '../models/OrganizationModel.js';
+import MemberModel from '../../models/MemberModel.js'; 
+import PaymentModel from '../../models/PaymentModel.js'; 
+import OrganizationModel from '../../models/OrganizationModel.js';
 
 // Function to generate the weekly report
 export async function generateWeeklyReport(req, res) {
@@ -47,12 +47,6 @@ export async function generateWeeklyPDFReport(req, res) {
         const addOrganizationDetailsHeader = () => {
           // Add organization details
           if (reportData.organization) {
-            const headerHeight = 50; // Height of the header block
-            const headerMargin = 10; // Margin between header block and top of the page
-        
-            // Draw a rectangle to create a header block
-            // doc.rect(0, headerMargin, doc.page.width, headerHeight).fill('#dddddd');
-        
             // Add header text
             doc.fontSize(25).text(`----${reportData.organization.name}----`, { align: 'center', underline: true  }).moveDown(0);
             doc.fontSize(13).text(`${reportData.organization.address}`, { align: 'center' }).moveDown(1.4);

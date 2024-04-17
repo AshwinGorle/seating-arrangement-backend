@@ -1,6 +1,7 @@
 import express from 'express';
-import { generateWeeklyReport, generateWeeklyPDFReport, generateWeeklyExcelReport } from '../controllers/reportController.js';
-
+import { generateWeeklyReport, generateWeeklyPDFReport, generateWeeklyExcelReport } from '../controllers/report/weeklyReportController.js';
+import { generateSeatStatusReportJSON, generateSeatStatusReportPDF} from '../controllers/report/seatReportController.js';
+import { generateFeeReportJSON, generateFeeReportPDF,generateFeeReportExcel } from '../controllers/report/feeReportController.js';
 const router = express.Router();
 
 // Route to generate weekly report in JSON format
@@ -11,4 +12,13 @@ router.get('/weekly-pdf/:organizationId', generateWeeklyPDFReport);
 
 // Route to generate weekly report in Excel format
 router.get('/weekly-excel/:organizationId', generateWeeklyExcelReport);
+
+router.get('/seat-status/:organizationId', generateSeatStatusReportJSON);
+router.get('/seat-status-pdf/:organizationId', generateSeatStatusReportPDF);
+
+router.get('/fee-report/:organizationId', generateFeeReportJSON);
+router.get('/fee-report-pdf/:organizationId', generateFeeReportPDF);
+router.get('/fee-report-excel/:organizationId', generateFeeReportExcel);
+
+
 export default router;
