@@ -321,7 +321,7 @@ export async function generateWeeklyPDFReportPuppeteer(req, res) {
     await browser.close();
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="weekly_report.pdf"');
+    res.setHeader('Content-Disposition', `attachment; filename=weekly_report-${Date.now()}.pdf`);
     res.send(pdfBuffer);
   } catch (error) {
     console.error('Error generating weekly PDF report:', error);
