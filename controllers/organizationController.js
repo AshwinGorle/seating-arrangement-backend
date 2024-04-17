@@ -20,6 +20,38 @@ class OrganizationController {
     }
   };
 
+  static getOrganizationById = async (req, res) => {
+    const { organizationId } = req.params;
+    try {
+      if (req.user.role !== "admin") {
+        return res.status(401).send({
+          status: "failed",
+          message: "Only admin can fetch organization by id",
+        });
+      }
+      const organization = await OrganizationModel.findById(organizationId);
+      if (!organization) {
+        return res.status(404).send({
+          status: "failed",
+          message: "Organization not found",
+        });
+      }
+      return res.status(200).send({
+        status: "success",
+        message: "Organization fetched successfully!",
+        data: organization,
+      });
+    } catch (err) {
+      console.log("Error fetching organization: ", err);
+      return res.status(500).send({
+        status: "failed",
+        message: "Something went wrong! Failed to fetch organization",
+        err: err,
+      });
+    }
+  };
+
+
    static getUserOfOrganization = async (req, res)=>{
     const {organizationId} = req.params;
     const {role} = req.query;
