@@ -66,7 +66,7 @@ class AccountController {
         { new: true }
       ).session(session);
 
-      return [updatedMember, createdAccount[0]];
+      return createdAccount[0];
     } catch (err) {
       console.error("Error creating account:", err);
       throw err; // Re-throw the error to be caught by the caller

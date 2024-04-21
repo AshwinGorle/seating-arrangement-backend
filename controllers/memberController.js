@@ -7,7 +7,9 @@ import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
 import authorizeActionInOrganization from "../utils/authorizeActionInOrganization.js";
 import AccountModel from "../models/AccountModel.js";
 import PaymentModel from "../models/PaymentModel.js";
-
+import { defaultAvatarUrl } from "../constant.js";
+import uploadToCloudinary from "../utils/uploadToCloudinary.js";
+import fs from 'fs'
 class MemberController {
   static getAllMemberByOrganizationId = async (req, res) => {
     // Validate organizationId
@@ -15,7 +17,10 @@ class MemberController {
       const { pageNumber = 1 } = req.params;
       const perPage = 10;
       const skip = (pageNumber - 1) * 10;
-      const organizationId = getRequiredOrganizationId(req, "admin requires organization Id to fetch all members")
+      const organizationId = getRequiredOrganizationId(
+        req,
+        "admin requires organization Id to fetch all members"
+      );
       // Authorization check
       authorizeActionInOrganization(
         req.user,
@@ -29,11 +34,16 @@ class MemberController {
       }
       const allMembers = await MemberModel.find({
         organization: organizationId,
-      }).select('name membershipStatus').populate('account', 'balance').populate('seat', 'seatNumber')
+      })
+        .select("avatar name membershipStatus")
+        .populate("account", "balance")
+        .populate("seat", "seatNumber");
       if (allMembers.length === 0) {
         throw new Error("No members found in this organization");
       }
-      const totalMembers = await MemberModel.countDocuments({ organization: organizationId });
+      const totalMembers = await MemberModel.countDocuments({
+        organization: organizationId,
+      });
 
       console.log(allMembers, totalMembers);
       res.status(200).send({
@@ -82,6 +92,7 @@ class MemberController {
   static updateMemberById = async (req, res) => {
     const { memberId } = req.params;
     const { name, phone, email, address } = req.body;
+
     if (!memberId)
       return res.status(400).send({
         status: "failed",
@@ -90,13 +101,30 @@ class MemberController {
     try {
       const member = await MemberModel.findById(memberId);
       if (!member) throw new Error("No member found  with this id");
-
+       
       //Authorization check
-      authorizeActionInOrganization(req.user, member.organization, "You are not authorized to Update this member")
+      authorizeActionInOrganization(
+        req.user,
+        member.organization,
+        "You are not authorized to Update this member"
+      );
+
+      let avatar = member.avatar ? member.avatar : defaultAvatarUrl;
+
+      if (req.file) {
+        try {
+           const avatarFromCloudinary = await uploadToCloudinary(req.file.path, member.organization , member._id);
+           avatar = avatarFromCloudinary;
+           fs.unlinkSync(req.file.path);
+        } catch (err) {
+          fs.unlinkSync(req.file.path);
+          console.log("unable to upload profile pic on cloudinary");  
+        }
+      }
 
       const updatedMember = await MemberModel.findByIdAndUpdate(
         memberId,
-        { name, email, phone, address },
+        { name, email, phone, address, avatar },
         { new: true }
       );
       res.status(200).send({
@@ -114,7 +142,7 @@ class MemberController {
     // Extracting required fields from request body
     const { name, phone, email, address, preparation, gender, monthlySeatFee } =
       req.body;
-
+    let avatar = defaultAvatarUrl;
     const session = await mongoose.startSession();
     await session.startTransaction();
 
@@ -145,14 +173,15 @@ class MemberController {
 
       //manageing the joining date of a new member
       const joiningDate = new Date();
-      joiningDate.setTime(0, 0, 0, 0);
+      joiningDate.setHours(0, 0, 0, 0);
       const date = joiningDate.getDate();
       if (date == 29 || date == 30 || date == 31) {
         joiningDate.setDate(1);
       }
 
+
       // Creating member with provided data
-      const member = await MemberModel.create(
+      let member = await MemberModel.create(
         [
           {
             name,
@@ -165,11 +194,13 @@ class MemberController {
             organization: organizationId,
             createdAt: joiningDate,
             membershipStatus: "expired",
+            avatar
           },
         ],
         { session }
       ); // Passing session to create method
 
+      
       // Creating and linking the account to the currently creating member
       const accountDetails = await AccountController.createAccount(
         member[0]._id.toString(),
@@ -178,13 +209,25 @@ class MemberController {
         session
       );
 
+      //fetching and uploading the Avatar provided by the user
+      if (req.file) {
+        try {
+          const avatar = await uploadToCloudinary(req.file.path, organizationId , member[0]._id);
+          member[0] = await MemberModel.findByIdAndUpdate(member[0]._id, {avatar : avatar},{ new: true }).session(session)
+          fs.unlinkSync(req.file.path);
+        } catch (err) {
+          fs.unlinkSync(req.file.path);
+          console.log("unable to upload profile pic on cloudinary");  
+        }
+      }
+
       await session.commitTransaction();
       await session.endSession();
 
       return res.status(201).send({
         status: "success",
         message: `Member added successfully with Account in ${organization.name} organization`,
-        data: accountDetails,
+        data: {member : member[0], account : accountDetails},
       });
     } catch (err) {
       // Handling errors
@@ -217,7 +260,9 @@ class MemberController {
       }
 
       // Sending error response
-      return res.status(500).send({ status: "failed", message: `${err.message}` });
+      return res
+        .status(500)
+        .send({ status: "failed", message: `${err.message}` });
     }
   };
 
@@ -264,14 +309,14 @@ class MemberController {
       // deleteing the payment made by the currently deleting member.
 
       for (let i = 0; i < member.payments.length; i++) {
-        await PaymentModel.findByIdAndDelete(member.payments[i]).session(session);
+        await PaymentModel.findByIdAndDelete(member.payments[i]).session(
+          session
+        );
       }
 
       const deletedMember = await MemberModel.findByIdAndDelete(
         memberId
       ).session(session);
-
-
 
       await session.commitTransaction();
       await session.endSession();
@@ -284,7 +329,9 @@ class MemberController {
       await session.abortTransaction();
       await session.endSession();
       console.log("53 member deletion error: ", err.message);
-      return res.status(500).send({ status: "failed", message: `${err.message}` });
+      return res
+        .status(500)
+        .send({ status: "failed", message: `${err.message}` });
     }
   };
 
@@ -293,23 +340,25 @@ class MemberController {
        membershipStatus  : 'active' || 'inactive' || expired,
 
     */
-    console.log("member search called -----")
+    console.log("member search called -----");
 
     try {
       const { membershipStatus = "expired" } = req.query;
 
-      const organizationId = getRequiredOrganizationId(req, "Admin requires organization id to search members");
+      const organizationId = getRequiredOrganizationId(
+        req,
+        "Admin requires organization id to search members"
+      );
       const organization = await OrganizationModel.findById(organizationId);
       if (!organization) {
         throw new Error("Invalid organization Id is required to get seats");
       }
       const query = {
-        organization: organizationId
+        organization: organizationId,
       };
 
       query[`membershipStatus`] = membershipStatus;
-      console.log("query--------", query)
-
+      console.log("query--------", query);
 
       const members = await MemberModel.find(query);
 
@@ -326,7 +375,7 @@ class MemberController {
         message: `${err.message}`,
       });
     }
-  }
+  };
 }
 
 export default MemberController;

@@ -73,6 +73,9 @@ const memberSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Organization",
   },
+  avatar : {
+    type : String
+  }
 });
 
 memberSchema.index({ name: 1, organization: 1 }, { unique: true });

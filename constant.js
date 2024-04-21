@@ -22,3 +22,6 @@ eveningStartTime.setHours(6, 0, 0, 0); // Set to 6:00 PM
 
 export const fullDayEndTimeEndTime = new Date();
 eveningEndTime.setHours(23, 0, 0, 0); // Set to 11:00 PM
+
+
+export const defaultAvatarUrl = "https://image.freepik.com/free-vector/businessman-profile-cartoon_18591-58479.jpg"
