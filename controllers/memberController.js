@@ -92,7 +92,7 @@ class MemberController {
 
   static updateMemberById = async (req, res) => {
     const { memberId } = req.params;
-    const { name, phone, email, address } = req.body;
+    const { name, phone, email, address, monthlySeatFee } = req.body;
     console.log('data for updation-----',req.body );
     if (!memberId)
       return res.status(400).send({
@@ -125,9 +125,10 @@ class MemberController {
       console.log("update details -----------", req.body);
       const updatedMember = await MemberModel.findByIdAndUpdate(
         memberId,
-        { name, email, phone, address, avatar },
+        { name, email, phone, address, avatar, monthlySeatFee },
         { new: true }
       );
+      console.log("updated member------------",updatedMember)
       res.status(200).send({
         status: "success",
         message: `member (${member.name}) updated successfully`,
