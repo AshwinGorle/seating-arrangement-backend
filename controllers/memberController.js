@@ -58,6 +58,7 @@ class MemberController {
   };
 
   static getMemberById = async (req, res) => {
+    
     const { memberId } = req.params;
     if (!memberId)
       return res.status(400).send({
@@ -92,7 +93,7 @@ class MemberController {
   static updateMemberById = async (req, res) => {
     const { memberId } = req.params;
     const { name, phone, email, address } = req.body;
-
+    console.log('data for updation-----',req.body );
     if (!memberId)
       return res.status(400).send({
         status: "failed",
@@ -121,7 +122,7 @@ class MemberController {
           console.log("unable to upload profile pic on cloudinary");  
         }
       }
-
+      console.log("update details -----------", req.body);
       const updatedMember = await MemberModel.findByIdAndUpdate(
         memberId,
         { name, email, phone, address, avatar },

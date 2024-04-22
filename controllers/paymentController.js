@@ -6,19 +6,32 @@ import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
 import OrganizationModel from "../models/OrganizationModel.js";
 class PaymentController {
   static getAllPaymentsOfMember = async (req, res) => {
-    console.log("all payment fetched called")
+    console.log("all payment fetched called");
     try {
-      const {memberId} = req.params;
-      if(!memberId) throw new Error("To fetch all payments of member. memberId is required!");
-      const member = await  MemberModel.findById(memberId).populate('payments account');
-      if(!member) throw new Error("Member not found!");
-      authorizeActionInOrganization(req.user,member.organization,"You are not authorized to get payment of this member!");
+      const { memberId } = req.params;
+      if (!memberId)
+        throw new Error(
+          "To fetch all payments of member. memberId is required!"
+        );
+      const member = await MemberModel.findById(memberId)
+        .populate("payments")
+        .populate({
+          path: "account",
+          populate: {
+            path: "accountHolder",
+          },
+        });
+      if (!member) throw new Error("Member not found!");
+      authorizeActionInOrganization(
+        req.user,
+        member.organization,
+        "You are not authorized to get payment of this member!"
+      );
       res.status(200).send({
-        status : "success",
-        message : "Payments and Account of member successfully!",
-        data: [member.payments, member.account]
-      })
-
+        status: "success",
+        message: "Payments and Account of member successfully!",
+        data: { payments: member.payments, account: member.account },
+      });
     } catch (err) {
       console.error("Error fetching all payment:", err);
       res.status(500).send({
@@ -26,35 +39,34 @@ class PaymentController {
         message: err.message,
       });
     }
-};
+  };
 
+  static getAllPayment = async (req, res) => {
+    try {
+      const organizationId = getRequiredOrganizationId(
+        req,
+        "Admin require organizationId to fetch all payments"
+      );
+      const organization = await OrganizationModel.findById(organizationId);
+      if (!organization)
+        throw new Error("To get all payment organization Id is required");
+      const payments = await PaymentModel.find({
+        organization: organizationId,
+      }).populate("paidBy");
 
-static getAllPayment = async (req, res) => {
-  try {
-    const organizationId = getRequiredOrganizationId(
-      req,
-      "Admin require organizationId to fetch all payments"
-    );
-    const organization = await OrganizationModel.findById(organizationId);
-    if (!organization)
-      throw new Error("To get all payment organization Id is required");
-    const payments = await PaymentModel.find({
-      organization: organizationId,
-    }).populate("paidBy");
-
-    res.status(200).send({
-      status: "success",
-      message: "All payment fetched successfully!",
-      data: payments,
-    });
-  } catch (err) {
-    console.error("Error fetching all payment:", err);
-    res.status(500).send({
-      status: "failed",
-      message: err.message,
-    });
-  }
-};
+      res.status(200).send({
+        status: "success",
+        message: "All payment fetched successfully!",
+        data: payments,
+      });
+    } catch (err) {
+      console.error("Error fetching all payment:", err);
+      res.status(500).send({
+        status: "failed",
+        message: err.message,
+      });
+    }
+  };
 
   static getPaymentById = async (req, res) => {
     try {
@@ -145,7 +157,9 @@ static getAllPayment = async (req, res) => {
       await session.endSession();
 
       console.log("makePayment error:", err);
-      return res.status(500).send({ status: "failed", message: `${err.message}` });
+      return res
+        .status(500)
+        .send({ status: "failed", message: `${err.message}` });
     }
   };
 
@@ -276,7 +290,7 @@ static getAllPayment = async (req, res) => {
         message:
           "Payment Deleted and curresponding Account Updated successfully",
         data: [payment, member.account],
-      }); 
+      });
     } catch (err) {
       await session.abortTransaction();
       await session.endSession();
