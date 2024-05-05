@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
 
-const lokerSchema = new mongoose.Schema({
-    lokerNumber: {
+const lockerSchema = new mongoose.Schema({
+    lockerNumber: {
         type: Number,
         required: true
     },
     price: {
         type: Number,
-        default : 0,
+        default: 0,
         required: true
     },
     size: {
@@ -16,8 +16,7 @@ const lokerSchema = new mongoose.Schema({
         default: 'medium'
     },
     location: {
-        type: String,
-        required: true
+        type: String
     },
     isOccupied: {
         type: Boolean,
@@ -28,10 +27,10 @@ const lokerSchema = new mongoose.Schema({
         ref: 'Member',
         default: null
     },
-    organization : {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : 'Organization',
-        require : true
+    organization: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization',
+        require: true
     },
     createdAt: {
         type: Date,
@@ -43,8 +42,8 @@ const lokerSchema = new mongoose.Schema({
     }
 });
 
-lokerSchema.index({organization : 1, lokerNumber : 1}, {unique : true});
+lockerSchema.index({ organization: 1, lockerNumber: 1 }, { unique: true });
 
-const LokerModel = mongoose.model('Locker', lokerSchema);
+const LockerModel = mongoose.model('Locker', lockerSchema);
 
-export default LokerModel;
+export default LockerModel;

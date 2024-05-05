@@ -13,7 +13,7 @@ import accountRouter from '../routes/accountRouter.js';
 import paymentRouter from '../routes/paymentRouter.js';
 import AuthController from '../controllers/authController.js';
 import scheduleRouter from '../routes/scheduleRouter.js';
-import lokerRouter from '../routes/lokerRouter.js';
+import lockerRouter from '../routes/lockerRouter.js';
 import staffRouter from '../routes/staffRouter.js';
 import reportRouter from '../routes/reportRouter.js';
 
@@ -52,7 +52,7 @@ app.use('/api/v1/seat/',seatRouter)
 app.use('/api/v1/account/', accountRouter);
 app.use('/api/v1/payment/', paymentRouter);
 app.use('/api/v1/schedule/', scheduleRouter);
-app.use('/api/v1/loker',lokerRouter);
+app.use('/api/v1/locker',lockerRouter);
 app.use('/api/v1/reports',reportRouter);
 
 
