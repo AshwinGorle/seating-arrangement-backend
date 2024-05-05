@@ -5,17 +5,33 @@ const paymentSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    type : {
+    nature : {
         type  : String,
-        enum : ['real', 'adjustment']
+        enum : ['real', 'adjustment'],
+        default : 'real'
     },
     method: {
         type: String,
         enum: ["cash", 'online'], // Add more methods as needed
         required: true
     },
+    type: {
+        type: String,
+        enum: ['cr', 'dr'],
+        required: true,
+      },
     
+    desciption : {
+        type : String,
+    },
+
     paidBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Member',
+        required: true
+    },
+
+    receivedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Member',
         required: true

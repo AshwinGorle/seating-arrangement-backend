@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const lokerSchema = new mongoose.Schema({
-    lokerNumber: {
+    lockerNumber: {
         type: Number,
         required: true
     },
@@ -13,20 +13,15 @@ const lokerSchema = new mongoose.Schema({
     size: {
         type: String,
         enum: ['S', 'M', 'L'],
-        default: 'medium'
+        default: 'M'
     },
     location: {
         type: String,
-        required: true
+        
     },
     isOccupied: {
         type: Boolean,
         default: false
-    },
-    occupant: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Member',
-        default: null
     },
     organization : {
         type : mongoose.Schema.Types.ObjectId,
@@ -40,8 +35,16 @@ const lokerSchema = new mongoose.Schema({
     updatedAt: {
         type: Date,
         default: Date.now
-    }
-});
+    },
+    occupant: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Member',
+        default: null
+    },
+    validity :  {type : Date, default : null},
+    
+
+},{timestamps : true});
 
 lokerSchema.index({organization : 1, lokerNumber : 1}, {unique : true});
 

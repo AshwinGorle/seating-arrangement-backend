@@ -6,6 +6,7 @@ const organizationRouter = express.Router();
 organizationRouter.get("/", restrictTo(["admin"]) ,OrganizationController.getAllOrganizations);
 organizationRouter.get("/:organizationId", restrictTo(["admin", "owner"]) ,OrganizationController.getOrganizationById);
 organizationRouter.post("/", restrictTo(["admin"]) ,OrganizationController.createOrganization);
+organizationRouter.put("/settings/default_price/:organizationId", restrictTo(["admin", "owner"]) ,OrganizationController.updateOrganizationSettings);
 organizationRouter.put("/:organizationId", restrictTo(["admin", "owner"]) ,OrganizationController.updateOrganization);
 
 organizationRouter.get("/get_user/:organizationId", restrictTo(["admin","owner"]) ,OrganizationController.getUserOfOrganization);

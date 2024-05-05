@@ -9,9 +9,9 @@ import MemberModel from "../models/MemberModel.js";
 class LockerController {
   static createLocker = async (req, res) => {
     try {
-      const { lokerNumber, price, size, location } = req.body;
+      const { lockerNumber, price, size, location } = req.body;
       // Check if all required fields are present
-      if (!lokerNumber || !price || !size || !location) {
+      if (!lockerNumber || !price || !size || !location) {
         throw new Error("All fields are required");
       }
 
@@ -20,12 +20,13 @@ class LockerController {
         req,
         "admin requires organization Id to create locker"
       );
+
       const organization = await OrganizationModel.findById(organizationId);
       if (!organization) throw new Error("Organization not found!");
 
       // Create the locker
       const loker = await LokerModel.create({
-        lokerNumber,
+        lockerNumber,
         price,
         size,
         location,
@@ -79,10 +80,26 @@ class LockerController {
       }
   }
 
-  static updateLocker = async (req, res) => {
+  static getLockerById = async (req,res) =>{ 
+      try{
+        const { lockerId } = req.params;
+        if (!lockerId) throw new Error ("Locker Id is required");
+
+        const locker = await LokerModel.findById(lockerId);
+        if(!locker) throw new Error("locker does not exists");
+
+        authorizeActionInOrganization(req.user, locker.organization, "Your are not authorized for this action")
+
+        res.send({status : "success", message : "Locker fetched successfylly !", data : locker})
+      }catch(err){
+        res.send({status : "failed", message : `${err.message}`});
+      } 
+  }
+
+  static updateLockerById = async (req, res) => {
     try {
         const { lockerId } = req.params;
-        const { price, size, location } = req.body;
+        const { price, size, location, lockerNumber } = req.body;
 
         // Check if lockerId is provided
         if (!lockerId) {
@@ -91,12 +108,13 @@ class LockerController {
 
         // Find the locker by ID
         const locker = await LokerModel.findById(lockerId);
+        console.log("Locler----------", locker);
         if (!locker) {
             throw new Error('Locker not found');
         }
 
         //authorized action in organization
-        authorizeActionInOrganization(req.user, locker._id, "You are not authorized to update locker in this Org." );
+        authorizeActionInOrganization(req.user, locker.organization, "You are not authorized to update locker in this Org." );
 
         // Update the locker fields
         if (price) {
@@ -108,7 +126,9 @@ class LockerController {
         if (location) {
             locker.location = location;
         }
-
+        if (lockerNumber) {
+            locker.lockerNumber = lockerNumber;
+        }
         // Save the updated locker
         const updatedLocker = await locker.save();
 
@@ -136,21 +156,23 @@ static deleteLocker = async (req, res) => {
         }
 
         // Find the locker by ID
-        const locker = await LokerModel.findById(lockerId);
+        const locker = await LokerModel.findById(lockerId).populate('occupant');
         if (!locker) {
             throw new Error('Locker not found');
         }
-
+        
         //authorized action in organization
         authorizeActionInOrganization(req.user, locker.organization , "You are not authorized to delete this locker in this Org.");
+        
+        if(locker.occupant != null) throw new Error (`can't delete Locker, it is occupied by ${locker.occupant.name}`);
 
         // Delete the locker
-        await locker.remove();
+        const deltedLocker = await LokerModel.findByIdAndDelete(lockerId);
 
         res.status(200).send({
             status: 'success',
             message: 'Locker deleted successfully',
-            data : locker
+            data : deltedLocker
         });
     } catch (err) {
         console.error('Error deleting locker:', err.message);
@@ -162,8 +184,9 @@ static deleteLocker = async (req, res) => {
 };
 
 static allocateLockerToMember = async (req, res) => {
+
     const session = await mongoose.startSession();
-     await session.startTransaction();
+    await session.startTransaction();
     try {
         const { memberId, lockerId } = req.body;
 
@@ -192,13 +215,15 @@ static allocateLockerToMember = async (req, res) => {
         if (locker?.occupant) {
             const lockerOccupant = await MemberModel.findById(locker.occupant); 
             if(!lockerOccupant) throw new Error ('member id is present in occupant but the member does not exists')
+            //check wheater the member already owns that locker;
+            if(member.lockers.includes(lockerId)) throw new Error ("This Member already owns this locker");     
             throw new Error(`Locker is already allocated to another member (${lockerOccupant.name})`);
         }
 
         // Assign the locker to the member
         locker.occupant = memberId;
         await locker.save({session});
-        
+
         // Update the member's record to include the allocated locker
         member.lockers.push(lockerId);
         await member.save({session});
@@ -218,7 +243,7 @@ static allocateLockerToMember = async (req, res) => {
         });
     } catch (err) {
         await session.abortTransaction();
-        await asession.endSession();
+        await session.endSession();
         console.error('Error allocating locker to member:', err.message);
         res.status(400).send({
             status: 'failed',
@@ -232,7 +257,7 @@ static deallocateLockerById = async (req, res) => {
     const session = await mongoose.startSession();
     await session.startTransaction();
     try {
-        const { lockerId } = req.params;
+        const { lockerId } = req.body;
 
         // Check if lockerId is provided
         if (!lockerId) {
@@ -255,21 +280,18 @@ static deallocateLockerById = async (req, res) => {
             throw new Error('Locker is not currently allocated');
         }
 
+        // Find the member to update their record
+        const member = await MemberModel.findById(locker.occupant);
+        if (!member) throw new Error('Member not found');
+        
         // Deallocate the locker
         locker.occupant = null;
         await locker.save({ session });
 
-        // Find the member to update their record
-        const member = await MemberModel.findById(locker.occupant);
-        
-        if (!member) {
-            throw new Error('Member not found');
-        }
-
         // Remove the locker ID from the member's record
         if (member) {
             member.lockers = member.lockers.filter(id => id.toString() !== lockerId);
-            await member.save({ session });
+            await member.save({ session });   
         }
 
         await session.commitTransaction();
@@ -290,6 +312,9 @@ static deallocateLockerById = async (req, res) => {
         });
     }
 };
+
+
+
 }
 
 export default LockerController;

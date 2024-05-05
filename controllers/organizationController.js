@@ -1,6 +1,8 @@
 import OrganizationModel from "../models/OrganizationModel.js";
 import UserModel from "../models/UserModel.js";
 import mongoose from "mongoose";
+import authorizeActionInOrganization from "../utils/authorizeActionInOrganization.js";
+import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
 class OrganizationController {
   static getAllOrganizations = async (req, res) => {
     try {
@@ -57,17 +59,9 @@ class OrganizationController {
     const {role} = req.query;
     if(!organizationId) throw new Error("No organization id provided");
     if(!role) throw new Error("No role provided to fetch");
-    if (
-      !(
-        req.user.role == "admin" ||
-        (req.user.role == "owner" && req.user.organization == organizationId)
-      )
-    ) {
-      return res.status(401).send({
-        status: "failed",
-        message: "you are not authorized to get user of this organization",
-      });
-    }
+
+    //authorization action in org
+    authorizeActionInOrganization(req.user, organizationId, "You are not authorize to make changes in this Organization")
 
     try{
       const organization = await OrganizationModel.findById(organizationId).populate('staff owner');
@@ -117,29 +111,20 @@ class OrganizationController {
     const {name, address, description, logo, banner} = req.body;
     if(!organizationId) throw new Error("Can't update ! No valid organization id provided.");
     if(!(name || address || description || logo || banner)) throw new Error("Can't update ! Nothing to update.");
-    if (
-      !(
-        req.user.role == "admin" ||
-        (req.user.role == "owner" && req.user.organization == organizationId)
-      )
-    ) {
-      return res.status(200).send({
-        status: "failed",
-        message:
-          "you are not authorized to update this organization",
-      });
-    }
 
     try{
-        const organization = await OrganizationModel.findById(organizationId);
-        if(!organization) throw new Error("Organization does not exists!");
-        const updateOrganization = await OrganizationModel.findByIdAndUpdate(organizationId, {name, description, address, logo, banner}, {new : true}) 
-        return res.status(200).send({
-          status: "success",
-          message:
-            "Organization updated successfully!",
-          data : updateOrganization
-        });
+      const organization = await OrganizationModel.findById(organizationId);
+      if(!organization) throw new Error("Organization does not exists!");
+
+      authorizeActionInOrganization(req.user, organizationId, "You are not authorized to make changes in this Organization");
+      
+      const updateOrganization = await OrganizationModel.findByIdAndUpdate(organizationId, {name, description, address, logo, banner}, {new : true}) 
+      return res.status(200).send({
+        status: "success",
+        message:
+          "Organization updated successfully!",
+        data : updateOrganization
+      });
     }catch(err){
         console.log("58 organization update error : err");
         if (err.name === "CastError" && err.kind === "ObjectId") {
@@ -154,6 +139,64 @@ class OrganizationController {
         })
     }
   }
+
+  static updateOrganizationSettings = async (req, res) => {
+    try {
+      // Extract required fields from request body
+      const { field, category, fee } = req.body;
+  
+      // Validate presence of required fields
+      if (!field || !category || !fee) {
+        return res.status(400).json({ status: "failed", message: "Please provide all the required fields" });
+      }
+  
+      // Validate field value
+      if (field !== 'locker' && field !== 'seat') {
+        return res.status(400).json({ status: "failed", message: "Please provide a valid field" });
+      }
+  
+      // Validate category value based on field
+      const validCategories = field === 'locker' ? ['small', 'medium', 'large'] : ['fullDay', 'morning', 'noon', 'evening'];
+      if (!validCategories.includes(category)) {
+        return res.status(400).json({ status: "failed", message: "Invalid category" });
+      }
+  
+      // Validate fee value
+      if (isNaN(fee) || fee <= 0) {
+        return res.status(400).json({ status: "failed", message: "Please provide a valid fee" });
+      }
+  
+      // Get organization ID from request
+      const organizationId = getRequiredOrganizationId(req, "Admin requires organization ID to update settings");
+  
+      // Authorize action in organization
+      authorizeActionInOrganization(req.user, organizationId, "You are not authorized to update this organization");
+  
+      // Find organization by ID
+      const organization = await OrganizationModel.findById(organizationId);
+      if (!organization) {
+        return res.status(404).json({ status: "failed", message: "Organization does not exist" });
+      }
+  
+      // Update organization settings based on field and category
+      if (field === 'locker') {
+        organization.settings.defaultPrice.locker[category] = fee;
+      } else {
+        organization.settings.defaultPrice.seat[category] = fee;
+      }
+  
+      // Save updated organization
+      const updatedOrganization = await organization.save();
+  
+      // Send success response
+      res.json({ status: "success", message: "Settings updated successfully", data: updatedOrganization });
+  
+    } catch (err) {
+      console.error("Organization settings update error:", err);
+      res.status(500).json({ status: "failed", message: "Internal server error" });
+    }
+  }
+  
   static deleteOrganization = async (req, res) => {
     const { organizationId } = req.params;
     try {
