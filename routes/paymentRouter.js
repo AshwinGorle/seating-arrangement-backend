@@ -6,7 +6,6 @@ const paymentRouter = express.Router();
 
 //get all payment of a member
 paymentRouter.get('/member/:memberId', restrictTo(['all']), PaymentController.getAllPaymentsOfMember)
-
 paymentRouter.get('/', restrictTo(['all']), PaymentController.getAllPayment)
 paymentRouter.get('/:paymentId', restrictTo(['all']), PaymentController.getPaymentById)
 paymentRouter.post('/', restrictTo(['all']), PaymentController.makePayment)

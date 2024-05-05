@@ -220,7 +220,7 @@ class PaymentController {
       // Send the updated payment data in the response
       res.status(200).send({
         status: "success",
-        message: "Payment and curresponding Account updated successfully",
+        message: "Payment updated successfully",
         data: [payment, member.account],
       });
     } catch (err) {
@@ -288,7 +288,7 @@ class PaymentController {
       res.status(200).send({
         status: "success",
         message:
-          "Payment Deleted and curresponding Account Updated successfully",
+          "Payment Deleted and corresponding Account Updated successfully",
         data: [payment, member.account],
       });
     } catch (err) {
