@@ -5,11 +5,6 @@ const lockerSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    price: {
-        type: Number,
-        default: 0,
-        required: true
-    },
     size: {
         type: String,
         enum: ['S', 'M', 'L'],
@@ -17,10 +12,6 @@ const lockerSchema = new mongoose.Schema({
     },
     location: {
         type: String
-    },
-    isOccupied: {
-        type: Boolean,
-        default: false
     },
     occupant: {
         type: mongoose.Schema.Types.ObjectId,
@@ -40,14 +31,7 @@ const lockerSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    occupant: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Member',
-        default: null
-    },
-    validity :  {type : Date, default : null},
     
-
 },{timestamps : true});
 
 lockerSchema.index({ organization: 1, lockerNumber: 1 }, { unique: true });

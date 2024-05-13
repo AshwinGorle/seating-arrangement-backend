@@ -9,12 +9,14 @@ const addressSchema = new mongoose.Schema({
   pinCode: { type: Number },
 });
 
+
+
 const memberSchema = new mongoose.Schema({
   //make it required in production.
-  monthlySeatFee: {
-    type: Number,
-    default: 0
-  },
+  // monthlySeatFee: {
+  //   type: Number,
+  //   default: 0
+  // },
   name: {
     type: String,
     required: true,
@@ -39,16 +41,22 @@ const memberSchema = new mongoose.Schema({
   address: {
     type: String,
   },
-  seat: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Seat",
-  },
-  lockers: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Locker",
-    },
-  ],
+  // seat: {
+  //   type: mongoose.Schema.Types.ObjectId,
+  //   ref: "Seat",
+  // },
+  // lockers: [
+  //   {
+  //     type: mongoose.Schema.Types.ObjectId,
+  //     ref: "Locker",
+  //   },
+  // ],
+
+  services : [{
+    type : mongoose.Schema.Types.ObjectId,
+    ref : 'Service'
+  }],
+  
   payments: [
     {
       type: mongoose.Schema.Types.ObjectId,
@@ -72,6 +80,7 @@ const memberSchema = new mongoose.Schema({
   organization: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Organization",
+    require : true
   },
   avatar : {
     type : String

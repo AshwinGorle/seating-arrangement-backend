@@ -9,6 +9,7 @@ paymentRouter.get('/member/:memberId', restrictTo(['all']), PaymentController.ge
 paymentRouter.get('/', restrictTo(['all']), PaymentController.getAllPayment)
 paymentRouter.get('/:paymentId', restrictTo(['all']), PaymentController.getPaymentById)
 paymentRouter.post('/', restrictTo(['all']), PaymentController.makePayment)
+paymentRouter.post('/complete', restrictTo(['all']), PaymentController.completePayment);
 paymentRouter.put('/:paymentId', restrictTo(['all']), PaymentController.updatePaymentById)
 paymentRouter.delete('/:paymentId', restrictTo(['all']), PaymentController.deletePaymentById)
 

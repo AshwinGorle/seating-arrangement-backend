@@ -4,10 +4,19 @@ import SeatModel from "../models/SeatModel.js";
 import authorizeActionInOrganization from "../utils/authorizeActionInOrganization.js";
 import MemberModel from "../models/MemberModel.js";
 import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
+import {
+  validateDuration,
+  validateIsSameOrganization,
+  validateSchedule,
+} from "../utils/validation.js";
+import { ServerError, UserInputError } from "../utils/ErrorClasses.js";
+import ServiceController from "./serviceController.js";
+import PaymentController from "./paymentController.js";
+import { getValidityFromDuration } from "../utils/utilsFunctions.js";
 
 class SeatController {
   static searchSeats = async (req, res) => {
-    console.log("seat search called -----")
+    console.log("seat search called -----");
     /*Query Parameters:
         - schedule : Morning, Noon, Evening, FullDay (default: FullDay)
         - status: Vacant, Occupied (default: Vacant)
@@ -15,17 +24,21 @@ class SeatController {
     try {
       const { schedule = "fullDay", status = "vacant" } = req.query;
 
-      const organizationId = getRequiredOrganizationId(req, "Admin requires organization id to search seats");
+      const organizationId = getRequiredOrganizationId(
+        req,
+        "Admin requires organization id to search seats"
+      );
       const organization = await OrganizationModel.findById(organizationId);
       if (!organization) {
         throw new Error("Invalid organization Id is required to get seats");
       }
 
       const query = {
-        organization: organizationId
+        organization: organizationId,
       };
       if (schedule) {
-        query[`schedule.${schedule}.occupant`] = (status == "occupied") ? { $ne: null } : null;
+        query[`schedule.${schedule}.occupant`] =
+          status == "occupied" ? { $ne: null } : null;
       }
 
       const seats = await SeatModel.find(query).populate(
@@ -154,7 +167,9 @@ class SeatController {
       });
     } catch (err) {
       console.log("multiple seat creation err : ", err);
-      return res.status(500).send({ status: "failed", message: `${err.message}` });
+      return res
+        .status(500)
+        .send({ status: "failed", message: `${err.message}` });
     }
   };
 
@@ -258,66 +273,128 @@ class SeatController {
 
   static allocateSeat = async (req, res) => {
     const { schedule, memberId, seatId } = req.body;
+    const { renewalPeriodUnit, renewalPeriodAmount, charges } = req.body;
     const session = await mongoose.startSession();
-    await session.startTransaction();
+    session.startTransaction();
+
     try {
+      validateDuration(req);
+      validateSchedule(req);
+
       // Check if memberId and seatId are provided
-      if (!memberId || !seatId || !schedule) {
-        throw new Error("Member ID, Seat ID, and Schedule are required.");
+      if (!memberId || !seatId || !renewalPeriodUnit || !renewalPeriodAmount) {
+        throw new UserInputError(
+          "Member ID, Seat ID, and Schedule are required."
+        );
       }
 
       // Find the seat
       const seat = await SeatModel.findById(seatId);
+
       if (!seat) {
-        throw new Error("Seat not found.");
+        throw new ServerError("Seat not found.");
       }
 
       // Find the member
-      const member = await MemberModel.findById(memberId);
+      const member = await MemberModel.findById(memberId).populate("services payments");
       if (!member) {
-        throw new Error("Member not found.");
+        throw new ServerError("Member not found.");
       }
 
       //memerber organization should be same as seat organiation
-      if (member.organization.toString() != seat.organization.toString())
-        throw new Error(
-          "Member and Seat both should belong to the same  Organization"
-        );
+      if (!validateIsSameOrganization(member.organization, seat.organization))
+        throw new UserInputError("Both organizations does not mathes");
 
       //auth check
-      if (
-        !(
-          req?.user?.role == "admin" ||
-          req.user.organization.toString() === member.organization.toString()
-        )
-      )
-        throw new Error(
-          "You are not authorized to allocate the seats in this organization"
-        );
+      authorizeActionInOrganization(
+        req.user,
+        member.organization,
+        "you are not authorized to allocate this seat the this member"
+      );
 
       // Check if the seat is already occupied for the specified schedule
       if (seat.schedule[schedule].occupant) {
         throw new Error(`Seat is already occupied for ${schedule} schedule.`);
       }
 
+      // organization Id,
+      const organiationId = getRequiredOrganizationId(
+        req,
+        "Admin requires organizationId to create service in organization"
+      );
+
+      //create new service for the member of the seat
+      const options = {
+        serviceType: "SeatService",
+        renewalPeriodUnit,
+        renewalPeriodAmount,
+        charges,
+        organization: organiationId,
+        seat: seat._id,
+        memberId: member._id,
+      };
+      const newService = await ServiceController.createService(
+        options
+      );
+      console.log("101 newService----", newService);
+
       // Update the seat schedule with the member ID
       seat.schedule[schedule].occupant = memberId;
-      member.seat = seatId;
-      await Promise.all([seat.save(), member.save()]);
+
+      //adding the new Service into the members service array
+      member.services.push(newService);
+
+      //geting the new validity which will be increased after the payment
+      const newValidity = getValidityFromDuration(renewalPeriodUnit, renewalPeriodAmount, newService.lastBillingDate)
+      // create a pending and insert it into the member's  payments array
+      const paymentOptions = {
+        amount : newService.charges,
+        chargedOn : member._id,
+        serviceType : 'SeatService',
+        service : newService._id,
+        seat : seat._id,
+        status : 'pending',
+        desciption : "First payment at the time of purchase of seat",
+        organization : organiationId,
+        validity : newValidity,
+      };
+
+      const newPendingPayment =  PaymentController.createPayment(
+        paymentOptions
+      );
+      //updating pending payment history
+       newPendingPayment.timeline.push({action : "Created" , timestamp : Date.now()});
+      console.log('new pending payment---', newPendingPayment);
+      member.payments.push(newPendingPayment);
+      
+      
+      await seat.save({ session }),
+      await newService.save({ session }),
+      await newPendingPayment.save({session})
+      await member.save({ session }),
+   
+
       session.commitTransaction();
       await session.endSession();
 
-      res.status(200).json({
+      return res.status(200).json({
         status: "success",
-        message: `Seat allocated successfully for ${schedule} schedule.`,
-        data: [seat, member],
+        message: `Seat allocated to ${member.name} successfully for ${schedule} schedule.`,
+        data: { seat: seat, member: member, service : newService ,payment : newPendingPayment },
       });
     } catch (error) {
+
       await session.abortTransaction();
       await session.endSession();
 
+      if (error instanceof UserInputError || error instanceof ServerError) {
+        return res
+          .status(error.statusCode)
+          .send({ status: "failed", message: error.message });
+      }
+
       console.error("Error allocating seat:", error);
-      res.status(400).json({
+      return res.status(400).json({
         status: "failed",
         message: error.message,
       });
@@ -353,7 +430,6 @@ class SeatController {
         member.organization,
         "You are not authorized to de_allocate the seat of this member"
       );
-
 
       const seat = await SeatModel.findById(member.seat._id);
       if (!seat) throw new Error("Member's seat not found");

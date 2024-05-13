@@ -1,6 +1,34 @@
 import mongoose from 'mongoose';
-
+const paymentTimelineSchema = new mongoose.Schema({
+    action: {
+        type: String,
+        required: true
+    },
+    timestamp: {
+        type: Date,
+        default: Date.now
+    }
+});
 const paymentSchema = new mongoose.Schema({
+    
+    status : {
+        type : String,
+        enum : ['pending', 'completed'],
+        default : 'pending'
+    },
+    service : {
+        type : mongoose.Schema.Types.ObjectId,
+        ref : 'Service',
+        required : true
+    },
+    serviceType : {
+       type : String ,
+       enum : ["SeatService", "LockerService"]
+    },
+    validity : {
+        type : Date,
+        required : true
+    },
     amount: {
         type: Number,
         required: true
@@ -13,14 +41,9 @@ const paymentSchema = new mongoose.Schema({
     method: {
         type: String,
         enum: ["cash", 'online'], // Add more methods as needed
-        required: true
+        default : "cash"
     },
-    type: {
-        type: String,
-        enum: ['cr', 'dr'],
-        required: true,
-      },
-    
+
     desciption : {
         type : String,
     },
@@ -31,27 +54,39 @@ const paymentSchema = new mongoose.Schema({
         required: true
     },
 
-    receivedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Member',
-        required: true
-    },
-
     createdAt: {
         type: Date,
         default: Date.now
     },
+
     updatedAt :{
         type: Date,
         default: Date.now
     },
+
     organization : {
         type : mongoose.Schema.Types.ObjectId,
         ref : 'Organization',
         required : true
+    },
+    timeline: [paymentTimelineSchema] // Timeline to store actions and timestamps
+}, {discriminatorKey : 'serviceType'});
+
+const seatServicePayment  = new mongoose.Schema({
+    seat : {
+        type : mongoose.Schema.Types.ObjectId,
+        ref : 'Seat'
     }
-});
+})
+
+const lockerServicePayment  = new mongoose.Schema({
+    locker : {
+        type : mongoose.Schema.Types.ObjectId,
+        ref : 'Locker'
+    }
+})
 
 const PaymentModel = mongoose.model('Payment', paymentSchema);
-
+PaymentModel.discriminator('SeatPayment', seatServicePayment);
+PaymentModel.discriminator('LockerPayment', lockerServicePayment);
 export default PaymentModel;

@@ -4,7 +4,78 @@ import mongoose from "mongoose";
 import authorizeActionInOrganization from "../utils/authorizeActionInOrganization.js";
 import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
 import OrganizationModel from "../models/OrganizationModel.js";
+import ServiceModel from "../models/ServiceModel.js";
+import { isPrevPendingPaymentForSameService } from "../utils/utilsFunctions.js";
 class PaymentController {
+
+  static createPayment = ( {amount, chargedOn, serviceType, service , status='pending' ,method, desciption, organization , validity} ) => {
+    try{
+      const newPendingPayment =  new PaymentModel({
+        amount,
+        paidBy : chargedOn,
+        serviceType,
+        service,
+        method,
+        organization,
+        desciption,
+        validity,
+        status,
+        timeline : []
+      })  
+      return newPendingPayment;
+    }catch(err){
+       throw new Error(err.message);
+    }
+  }
+  // we will recive a payment id which which is supposed to a pending paymnet we have to mark it complete
+  static markPaymentCompleted = async  (paymentId)=>{
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        if(!paymentId) throw new Error("paymentId is required to 'complete' payment! ");
+        console.log("pId ---------------",paymentId)
+        const payment = await PaymentModel.findById(paymentId);
+        console.log("paument for which we are paying-------",payment)
+        const service  = await  ServiceModel.findById(payment.service);
+        if(!payment) throw new Error("Payment not found!");
+        if(payment.status == "completed") throw new Error ("Payment has already done!");
+        if(!service) throw new Error("Service not found! for which this payment is begin made");
+        
+        //check whether there is pending payment for the same service before this payment  if yes then  that should be completed first
+        if(isPrevPendingPaymentForSameService(paymentId, service._id) == true) {throw new Error("There are previous pending payments for this service resolve them first");}
+        
+        //increaseing the corresponding service validity adn 
+        service.validity = payment.validity;
+        payment.status = 'completed';
+        payment.updatedAt = Date.now();
+        //updating history of payment
+        payment.timeline.push({action : "peinding --> completed"});
+
+        await service.save({session});
+        await payment.save({session});
+
+        await session.commitTransaction();
+        await session.endSession();
+
+        return { payment : payment , service : service};
+
+      }catch (err){
+         throw new Error(err.message);
+      }
+  }
+
+  static completePayment = async (req, res) => {
+        const {paymentId} = req.body;
+        console.log('completePayment called for Pid : ', paymentId );
+        try{
+            const resData = await this.markPaymentCompleted(paymentId);
+            return res.send({status : 'success', message : "Payment completed successfully!", data : resData });
+        }catch(err){
+          console.log("completePayment Error : ",err);
+          return res.send({status : 'failed', message : err.message })
+        }
+  }  
+
   static getAllPaymentsOfMember = async (req, res) => {
     console.log("all payment fetched called");
     try {
@@ -40,6 +111,7 @@ class PaymentController {
       });
     }
   };
+  
 
   static getAllPayment = async (req, res) => {
     try {
