@@ -134,7 +134,8 @@ class SeatController {
   };
 
   static createMultipleSeats = async (req, res) => {
-    const { start, end } = req.body;
+    const { start, end } = req.body
+    console.log('stradjsflksjdflksjd----------',start)
     const noOfSeats = end - start + 1;
     try {
       if (!start) throw new Error("No of seats should be provided");
@@ -359,7 +360,7 @@ class SeatController {
         validity : newValidity,
       };
 
-      const newPendingPayment =  PaymentController.createPayment(
+      const newPendingPayment =  PaymentController.createPaymentUtil(
         paymentOptions
       );
       //updating pending payment history

@@ -25,10 +25,6 @@ const paymentSchema = new mongoose.Schema({
        type : String ,
        enum : ["SeatService", "LockerService"]
     },
-    validity : {
-        type : Date,
-        required : true
-    },
     amount: {
         type: Number,
         required: true

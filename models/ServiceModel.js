@@ -1,5 +1,22 @@
 
 import mongoose from "mongoose";
+
+const RenewalPaymentSchema = new mongoose.Schema({
+  payment: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Payment',
+    required: true
+  },
+  previousValidity: {
+    type: Date,
+    required: true
+  },
+  updatedValidity: {
+    type: Date,
+    required: true
+  }
+});
+
 export const serviceSchema = new mongoose.Schema({
   occupant : {
      type : mongoose.Schema.Types.ObjectId,
@@ -37,6 +54,10 @@ export const serviceSchema = new mongoose.Schema({
     type : Number,
     default : 1
   },
+
+  renewalPayments : [RenewalPaymentSchema,
+  ],
+
   charges: {
     type: Number,
     default: 0,

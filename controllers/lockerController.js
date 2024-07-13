@@ -294,7 +294,7 @@ class LockerController {
         organization: member.organization,
         validity: newValidity,
       };
-      const newPendingPayment = PaymentController.createPayment(paymentOptions);
+      const newPendingPayment = PaymentController.createPaymentUtil(paymentOptions);
       console.log("new pending payment while alloting locker---", newPendingPayment);
       member.payments.push(newPendingPayment);
       //updating new payment history

@@ -1,6 +1,6 @@
 import MemberModel from "../models/MemberModel.js";
 import PaymentModel from "../models/PaymentModel.js";
-import mongoose from "mongoose";
+import mongoose, { mongo } from "mongoose";
 import authorizeActionInOrganization from "../utils/authorizeActionInOrganization.js";
 import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
 import OrganizationModel from "../models/OrganizationModel.js";
@@ -8,8 +8,9 @@ import ServiceModel from "../models/ServiceModel.js";
 import { isPrevPendingPaymentForSameService } from "../utils/utilsFunctions.js";
 class PaymentController {
 
-  static createPayment = ( {amount, chargedOn, serviceType, service , status='pending' ,method, desciption, organization , validity} ) => {
+  static createPaymentUtil = ( {amount, chargedOn, serviceType, service , status='pending' ,method='cash', desciption, organization , validity} ) => {
     try{
+      if(!amount || !chargedOn || !serviceType || !service || !organization || !validity) throw new Error('All * fields are required');
       const newPendingPayment =  new PaymentModel({
         amount,
         paidBy : chargedOn,
@@ -28,7 +29,7 @@ class PaymentController {
     }
   }
   // we will recive a payment id which which is supposed to a pending paymnet we have to mark it complete
-  static markPaymentCompleted = async  (paymentId)=>{
+  static markPaymentCompletedUtil = async  (paymentId)=>{
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
@@ -45,12 +46,22 @@ class PaymentController {
         if(isPrevPendingPaymentForSameService(paymentId, service._id) == true) {throw new Error("There are previous pending payments for this service resolve them first");}
         
         //increaseing the corresponding service validity adn 
-        service.validity = payment.validity;
+        const renewalPayment =  {
+           payment : payment._id,
+           previousValidity : service.validity,
+           updatedValidity : payment.validity
+        }
+        
+        if(service.validity < payment.validity){
+           service.validity = payment.validity;      
+        }
         payment.status = 'completed';
         payment.updatedAt = Date.now();
-        //updating history of payment
+        
+        //updating history of payment and renewalPayments service 
+        await ServiceModel.findByIdAndUpdate({ $push : { renewalPayments : renewalPayment }}).session(session);
         payment.timeline.push({action : "peinding --> completed"});
-
+        
         await service.save({session});
         await payment.save({session});
 
@@ -60,21 +71,65 @@ class PaymentController {
         return { payment : payment , service : service};
 
       }catch (err){
+         await session.abortTransaction();
+         await session.endSession();
          throw new Error(err.message);
       }
   }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+  
+   
   static completePayment = async (req, res) => {
         const {paymentId} = req.body;
         console.log('completePayment called for Pid : ', paymentId );
         try{
-            const resData = await this.markPaymentCompleted(paymentId);
+            const resData = await this.markPaymentCompletedUtil(paymentId);
             return res.send({status : 'success', message : "Payment completed successfully!", data : resData });
         }catch(err){
           console.log("completePayment Error : ",err);
           return res.send({status : 'failed', message : err.message })
         }
   }  
+
+  static chargePayment = async (req, res) =>{
+        const {amount, serviceId, validity, method, desciption , isReceived} = req.body;
+        const session = await mongoose.startSession();
+        await session.startTransaction();
+        try{
+          const service = ServiceModel.findById(serviceId);
+          if(!service) throw new Error('service not found for which payment is being created!');
+          const validityDate = new Date(validity)
+          
+          // checking if the payment validity is less than the curr validity of service if yes then this payment can not be created
+          if(validityDate <= service.validity) throw new Error('the payment you are creating has less validity than the service currently have!');
+          
+          
+          const newPendingPayment =  await new PaymentModel.create([{
+            amount,
+            paidBy : service?.occupant,
+            serviceType,
+            service : serviceId,
+            method,
+            organization,
+            desciption,
+            validity : validityDate,
+            status : 'pending',
+            timeline : []
+          }], {session});
+
+          // inserting this payment into members payment array
+          const member = MemberModel.findByIdAndUpdate(service.occupant, {
+            $push : {payments : newPendingPayment._id}
+          }).session({session});
+         
+
+
+
+        }catch(err){
+           res.send({status : 'failed', message : err.message});
+        }
+  }
 
   static getAllPaymentsOfMember = async (req, res) => {
     console.log("all payment fetched called");

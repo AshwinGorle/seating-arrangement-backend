@@ -18,7 +18,8 @@ const checkForAuth = async (req, res, next) => {
         return next();
     } catch (error) {
         if (error.message === 'jwt expired') {
-            return res.status(401).json({ status : "failed", message : 'Token has expired' });
+            // return res.status(401).json({ status : "failed", message : 'Token has expired' });
+            return next();
         } else {
             return res.status(500).json({ status : "failed", message : 'Internal Server Error' });
         }
