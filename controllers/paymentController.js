@@ -5,23 +5,29 @@ import authorizeActionInOrganization from "../utils/authorizeActionInOrganizatio
 import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
 import OrganizationModel from "../models/OrganizationModel.js";
 import ServiceModel from "../models/ServiceModel.js";
-import { isPrevPendingPaymentForSameService } from "../utils/utilsFunctions.js";
+import { getValidityFromDuration, isPrevPendingPaymentForSameService } from "../utils/utilsFunctions.js";
+import { getPayment } from "../helper/payment.js";
+import { getMember } from "../helper/member.js";
+import { getService } from "../helper/service.js";
+import { ServerError } from "../utils/ErrorClasses.js";
 class PaymentController {
 
-  static createPaymentUtil = ( {amount, chargedOn, serviceType, service , status='pending' ,method='cash', desciption, organization , validity} ) => {
+  static createPaymentUtil = ( {amount, chargedOn, serviceType, service , status='pending' ,method='cash', desciption, organization , renewalPeriodAmount,
+    renewalPeriodUnit} ) => {
     try{
-      if(!amount || !chargedOn || !serviceType || !service || !organization || !validity) throw new Error('All * fields are required');
+      if(!amount || !chargedOn || !serviceType || !service || !organization || !renewalPeriodAmount || !renewalPeriodUnit) throw new Error('All * fields are required');
       const newPendingPayment =  new PaymentModel({
         amount,
-        paidBy : chargedOn,
+        chargedOn,
         serviceType,
         service,
+        status,
         method,
         organization,
         desciption,
-        validity,
-        status,
-        timeline : []
+        timeline : [],
+        renewalPeriodAmount,
+        renewalPeriodUnit
       })  
       return newPendingPayment;
     }catch(err){
@@ -34,33 +40,33 @@ class PaymentController {
     session.startTransaction();
     try {
         if(!paymentId) throw new Error("paymentId is required to 'complete' payment! ");
-        console.log("pId ---------------",paymentId)
         const payment = await PaymentModel.findById(paymentId);
-        console.log("paument for which we are paying-------",payment)
-        const service  = await  ServiceModel.findById(payment.service);
         if(!payment) throw new Error("Payment not found!");
-        if(payment.status == "completed") throw new Error ("Payment has already done!");
+        const service  = await  ServiceModel.findById(payment.service);
         if(!service) throw new Error("Service not found! for which this payment is begin made");
+        if(payment.status == "completed") throw new Error ("Payment has already done!");
         
         //check whether there is pending payment for the same service before this payment  if yes then  that should be completed first
-        if(isPrevPendingPaymentForSameService(paymentId, service._id) == true) {throw new Error("There are previous pending payments for this service resolve them first");}
+        if(isPrevPendingPaymentForSameService(payment, service._id) == true) {throw new Error("There are previous pending payments for this service resolve them first");}
         
-        //increaseing the corresponding service validity adn 
-        const renewalPayment =  {
-           payment : payment._id,
-           previousValidity : service.validity,
-           updatedValidity : payment.validity
-        }
-        
-        if(service.validity < payment.validity){
-           service.validity = payment.validity;      
-        }
+        //increaseing the corresponding service validity adn
+
+        // const renewalPayment =  {
+        //    payment : payment._id,
+        //    previousValidity : service.validity,
+        //    updatedValidity : payment.validity
+        // }
+
+        // Defining new validity from the payment's validity;
+        const oldDate = new Date( Date.now());
+        const newValidity = getValidityFromDuration(payment.renewalPeriodUnit, payment.renewalPeriodAmount, service.validity)
+        service.validity = newValidity; 
+        payment.timeline.push({action : `${payment.status} --> completed`});
         payment.status = 'completed';
         payment.updatedAt = Date.now();
         
         //updating history of payment and renewalPayments service 
-        await ServiceModel.findByIdAndUpdate({ $push : { renewalPayments : renewalPayment }}).session(session);
-        payment.timeline.push({action : "peinding --> completed"});
+        // await ServiceModel.findByIdAndUpdate({ $push : { renewalPayments : renewalPayment }}).session(session);
         
         await service.save({session});
         await payment.save({session});
@@ -130,7 +136,7 @@ class PaymentController {
            res.send({status : 'failed', message : err.message});
         }
   }
-
+  
   static getAllPaymentsOfMember = async (req, res) => {
     console.log("all payment fetched called");
     try {
@@ -167,6 +173,20 @@ class PaymentController {
     }
   };
   
+  static getAllPaymentsByServiceId = async(req, res) => {
+      const {serviceId} = req.params
+      console.log("service id ------", serviceId)
+      try{
+        const service = await getService(serviceId);
+        let member = await getMember(service.occupant);
+        member.populate('payments');
+        const servicePaymets = member.payments.filter((payment)=> payment.service.toString() == serviceId.toString());
+        return res.status(200).json({status : 'success', message : "service Fetched successfully", data : servicePaymets});
+      }catch(err){
+        console.log("getAllPaymentsBySerceId : ", err);
+        return res.status(500).json({status : 'failed', message : err.message});
+      }
+  }
 
   static getAllPayment = async (req, res) => {
     try {
@@ -295,51 +315,20 @@ class PaymentController {
     await session.startTransaction();
     try {
       const { paymentId } = req.params;
-      const { amount, method } = req.body;
+      const { amount, renewalPeriodAmount, renewalPeriodUnit } = req.body;
 
-      // Check if paymentId is provided
-      if (!paymentId) {
-        throw new Error("Payment ID is required");
-      }
-
-      // Fetch the payment by its ID
-      const payment = await PaymentModel.findById(paymentId);
-      const member = await MemberModel.findById(payment.paidBy).populate(
-        "account"
-      );
-      if (!member)
-        throw new Error(
-          "Payment not updated ! member who paid does not exists"
-        );
+      const payment = await getPayment(paymentId);
+      const service = await getService(payment.service);
 
       //check auth
+      if(payment.status != 'pending') throw new ServerError("Only pending payment can be updated");
       authorizeActionInOrganization(req.user, payment.organization);
-
-      // Check if payment exists
-      if (!payment) {
-        throw new Error("Payment not found");
-      }
-
-      // Update the payment fields
-      if (amount) {
-        //Before updating the amout reflecting the changes of this updation in curresponding member's account
-        const prevAmount = payment.amount;
-        const updateAmount = amount;
-        member.account.balance =
-          member.account.balance + (prevAmount - updateAmount);
-        payment.amount = amount;
-      }
-      if (method) {
-        payment.method = method;
-      }
-
-      payment.updatedAt = Date.now();
-
-      // Save the updated payment and updated Acount Balance of the curresponding user
-      await Promise.all([
-        payment.save({ session }),
-        member.account.save({ session }),
-      ]);
+       
+      // updating payment;
+      const updatedPayment = await PaymentModel.findByIdAndUpdate(payment._id, {renewalPeriodAmount, renewalPeriodUnit, amount}, {new : true}).session(session);
+      const updatedService = await ServiceModel.findByIdAndUpdate(service._id, {renewalPeriodAmount, renewalPeriodUnit, charges : amount}, {new : true}).session(session);
+      updatedPayment.timeline.push({action : `Amount ${payment.amount} --> ${amount} renewalPeriodAmount ${payment.renewalPeriodAmount} --> ${renewalPeriodAmount} renewalPriodUnit ${payment.renewalPeriodUnit} --> ${renewalPeriodUnit}`})
+      await updatedPayment.save({session});
 
       await session.commitTransaction();
       await session.endSession();
@@ -348,7 +337,7 @@ class PaymentController {
       res.status(200).send({
         status: "success",
         message: "Payment updated successfully",
-        data: [payment, member.account],
+        data: {payment : updatedPayment, service : updatedService},
       });
     } catch (err) {
       await session.abortTransaction();

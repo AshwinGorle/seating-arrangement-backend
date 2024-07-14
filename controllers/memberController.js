@@ -37,7 +37,7 @@ class MemberController {
       })
         .select("avatar name membershipStatus")
         .populate("account", "balance")
-        .populate("seat", "seatNumber");
+        // .populate("seat", "seatNumber");
       if (allMembers.length === 0) {
         throw new Error("No members found in this organization");
       }
@@ -142,8 +142,10 @@ class MemberController {
 
   static createMember = async (req, res) => {
     // Extracting required fields from request body
+    
     const { name, phone, email, address, preparation, gender, monthlySeatFee } =
       req.body;
+      console.log(name, phone, email, address,preparation,gender, monthlySeatFee)
     let avatar = defaultAvatarUrl;
     const session = await mongoose.startSession();
     await session.startTransaction();
@@ -159,7 +161,7 @@ class MemberController {
         !preparation ||
         !monthlySeatFee
       ) {
-        throw new Error("All fields are required!");
+        throw new Error("All fields are requiredjksdfhkj!");
       }
 
       // Fetching required organizationId

@@ -32,11 +32,11 @@ export const getValidityFromDuration = (durationUnit, durationAmount, baseDate)=
     let increasedValidity = new Date(baseDate);
     switch(durationUnit){
         case 'days':
-            increasedValidity.setDate(increasedValidity.getDate() + durationAmount);
+            increasedValidity.setDate(increasedValidity.getDate() + Number(durationAmount));
                 break;
             
             case 'months':
-                increasedValidity = addMonthsToDate(baseDate, durationAmount);
+                increasedValidity = addMonthsToDate(baseDate, Number(durationAmount));
                 break;
             }
             
@@ -44,19 +44,19 @@ export const getValidityFromDuration = (durationUnit, durationAmount, baseDate)=
             
         }
 
-        export const isPrevPendingPaymentForSameService = async (currPaymentId, serviceId) => {
+        export const isPrevPendingPaymentForSameService = async (currPayment, serviceId) => {
             try {
                 // Find the current payment
-                const currPayment = await PaymentModel.findById(currPaymentId);
                 // Find the previous payment for the same service
-                const prevPayment = await PaymentModel.findOne({
-                    service: serviceId,
+                const prevPayments = await PaymentModel.findOne({
+                    organization : currPayment.organization,
+                    chargedOn : currPayment.chargedOn, 
                     status: 'pending',
+                    service: serviceId,
                     createdAt: { $lt: currPayment.createdAt } // Finding payments created earlier than the current payment
                 })?.sort({ createdAt: -1 }); // Sorting in descending order of creation date to get the latest previous payment
-                console.log('previous payment ', prevPayment);
-                if(prevPayment == null) return false;
-                else return true;
+                return (prevPayments == null) ? false : true; 
+                
             } catch (error) {
                 throw new Error(error.message);
             }

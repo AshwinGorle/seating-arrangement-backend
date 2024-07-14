@@ -5,6 +5,7 @@ import PaymentController from '../controllers/paymentController.js';
 const paymentRouter = express.Router();
 
 //get all payment of a member
+paymentRouter.get('/service/:serviceId', restrictTo(['all']), PaymentController.getAllPaymentsByServiceId)
 paymentRouter.get('/member/:memberId', restrictTo(['all']), PaymentController.getAllPaymentsOfMember)
 paymentRouter.get('/', restrictTo(['all']), PaymentController.getAllPayment)
 paymentRouter.get('/:paymentId', restrictTo(['all']), PaymentController.getPaymentById)

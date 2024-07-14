@@ -13,6 +13,9 @@ import { ServerError, UserInputError } from "../utils/ErrorClasses.js";
 import ServiceController from "./serviceController.js";
 import PaymentController from "./paymentController.js";
 import { getValidityFromDuration } from "../utils/utilsFunctions.js";
+import ServiceModel from "../models/ServiceModel.js";
+import { getMember } from "../helper/member.js";
+import { getService } from "../helper/service.js";
 
 class SeatController {
   static searchSeats = async (req, res) => {
@@ -135,7 +138,6 @@ class SeatController {
 
   static createMultipleSeats = async (req, res) => {
     const { start, end } = req.body
-    console.log('stradjsflksjdflksjd----------',start)
     const noOfSeats = end - start + 1;
     try {
       if (!start) throw new Error("No of seats should be provided");
@@ -275,9 +277,9 @@ class SeatController {
   static allocateSeat = async (req, res) => {
     const { schedule, memberId, seatId } = req.body;
     const { renewalPeriodUnit, renewalPeriodAmount, charges } = req.body;
+    
     const session = await mongoose.startSession();
-    session.startTransaction();
-
+    await session.startTransaction();
     try {
       validateDuration(req);
       validateSchedule(req);
@@ -332,21 +334,29 @@ class SeatController {
         charges,
         organization: organiationId,
         seat: seat._id,
-        memberId: member._id,
+        occupant: member._id,
       };
-      const newService = await ServiceController.createService(
-        options
-      );
+      const newService =  new ServiceModel({
+        occupant : member._id,
+        organization : organiationId,
+        serviceType : "SeatService",
+        renewalPeriodUnit,
+        renewalPeriodAmount,
+        charges,
+        seat : seat._id,
+      });
+
+      if(! newService) throw new ServerError("Service not created"); 
       console.log("101 newService----", newService);
 
-      // Update the seat schedule with the member ID
+      //Update the seat schedule with the member ID
       seat.schedule[schedule].occupant = memberId;
 
       //adding the new Service into the members service array
       member.services.push(newService);
 
       //geting the new validity which will be increased after the payment
-      const newValidity = getValidityFromDuration(renewalPeriodUnit, renewalPeriodAmount, newService.lastBillingDate)
+      // const newValidity = getValidityFromDuration(renewalPeriodUnit, renewalPeriodAmount, newService.lastBillingDate)
       // create a pending and insert it into the member's  payments array
       const paymentOptions = {
         amount : newService.charges,
@@ -357,16 +367,17 @@ class SeatController {
         status : 'pending',
         desciption : "First payment at the time of purchase of seat",
         organization : organiationId,
-        validity : newValidity,
+        renewalPeriodAmount,
+        renewalPeriodUnit
       };
 
-      const newPendingPayment =  PaymentController.createPaymentUtil(
+      const newPendingPayment =  await PaymentController.createPaymentUtil(
         paymentOptions
       );
       //updating pending payment history
        newPendingPayment.timeline.push({action : "Created" , timestamp : Date.now()});
-      console.log('new pending payment---', newPendingPayment);
-      member.payments.push(newPendingPayment);
+       console.log('new pending payment---', newPendingPayment);
+       member.payments.push(newPendingPayment);
       
       
       await seat.save({ session }),
@@ -375,7 +386,7 @@ class SeatController {
       await member.save({ session }),
    
 
-      session.commitTransaction();
+      await session.commitTransaction();
       await session.endSession();
 
       return res.status(200).json({
@@ -383,10 +394,12 @@ class SeatController {
         message: `Seat allocated to ${member.name} successfully for ${schedule} schedule.`,
         data: { seat: seat, member: member, service : newService ,payment : newPendingPayment },
       });
+
     } catch (error) {
 
       await session.abortTransaction();
       await session.endSession();
+      console.error("Error allocating seat:", error);
 
       if (error instanceof UserInputError || error instanceof ServerError) {
         return res
@@ -394,78 +407,15 @@ class SeatController {
           .send({ status: "failed", message: error.message });
       }
 
-      console.error("Error allocating seat:", error);
       return res.status(400).json({
         status: "failed",
         message: error.message,
       });
+      
     }
   };
+  
 
-  static deallocateSeatByMemberId = async (req, res) => {
-    const { memberId } = req.params;
-
-    const session = await mongoose.startSession();
-    await session.startTransaction();
-
-    try {
-      if (!memberId) {
-        throw new Error("Member ID is required.");
-      }
-
-      const member = await MemberModel.findById(memberId)
-        .populate("seat")
-        .session(session);
-
-      if (!member) {
-        throw new Error("Member not found.");
-      }
-
-      if (!member?.seat?._id) {
-        throw new Error("Member have not alloted any seat.");
-      }
-
-      //check auth
-      authorizeActionInOrganization(
-        req.user,
-        member.organization,
-        "You are not authorized to de_allocate the seat of this member"
-      );
-
-      const seat = await SeatModel.findById(member.seat._id);
-      if (!seat) throw new Error("Member's seat not found");
-
-      //seting seat of member null
-      member.seat = null;
-
-      //removing member from the curresponding shcedule of seat
-      for (const key in seat?.schedule) {
-        if (seat.schedule[key]?.occupant?.toString() == memberId?.toString()) {
-          seat.schedule[key].occupant = null;
-        }
-      }
-
-      await Promise.all([seat.save(), member.save()]);
-
-      await session.commitTransaction();
-      await session.endSession();
-
-      res.status(200).json({
-        status: "success",
-        message: `Seats deallocated successfully for member ID ${memberId}.`,
-        data: [member, seat],
-      });
-    } catch (error) {
-      await session.abortTransaction();
-      await session.endSession();
-
-      console.error("Error deallocating seats by member ID:", error);
-      res.status(400).json({
-        status: "failed",
-        message: error.message,
-      });
-    }
-  };
 }
 
 export default SeatController;

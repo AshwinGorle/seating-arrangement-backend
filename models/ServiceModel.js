@@ -20,7 +20,13 @@ const RenewalPaymentSchema = new mongoose.Schema({
 export const serviceSchema = new mongoose.Schema({
   occupant : {
      type : mongoose.Schema.Types.ObjectId,
-     ref : 'Member'
+     ref : 'Member',
+     required : true
+  },
+  status : {
+    type : String,
+    enum : ["active", "inActive"],
+    default : 'active'
   },
   serviceType: {
     type: String,
