@@ -177,9 +177,11 @@ class PaymentController {
       const {serviceId} = req.params
       console.log("service id ------", serviceId)
       try{
-        const service = await getService(serviceId);
+        if(!serviceId) throw new ServerError("Service id needed");
+        const service = await ServiceModel.findById(serviceId);
+        if(!service) throw new ServerError("Service not found");
         let member = await getMember(service.occupant);
-        member.populate('payments');
+        member = await member.populate('payments');
         const servicePaymets = member.payments.filter((payment)=> payment.service.toString() == serviceId.toString());
         return res.status(200).json({status : 'success', message : "service Fetched successfully", data : servicePaymets});
       }catch(err){

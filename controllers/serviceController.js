@@ -45,7 +45,8 @@ class ServiceController {
   static getServiceById = async (req, res) => {
     try {
       const { serviceId } = req.params;
-      const services = await getService(serviceId);
+      if(!serviceId) throw new ServerError("Service Id needed")
+      const services = await ServiceModel.findById(serviceId);
       res.status(200).json({
         status: "success",
         message: "service fetched successfully!",
