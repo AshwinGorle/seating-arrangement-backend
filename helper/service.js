@@ -3,10 +3,11 @@ import ServiceModel from "../models/ServiceModel.js";
 
 export const getService = async (serviceId)=>{
     try{
-        if(!service) throw new ServerError("service not found");
+        if(!service) throw new ServerError("serviceId is required");
         const service = await ServiceModel.findById(serviceId).populate(
             "locker seat"
           );
+        if(!service) throw new ServerError('service not found');  
         return service;
     }
     catch(err){
