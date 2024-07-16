@@ -191,6 +191,10 @@ class PaymentController {
   }
   static example=async()=>{
     console.log('ehllow');
+    console.log('ehllow');
+    console.log('ehllow');
+    console.log('ehllow');
+    
   }
   static getAllPayment = async (req, res) => {
     try {
