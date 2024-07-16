@@ -189,7 +189,9 @@ class PaymentController {
         return res.status(500).json({status : 'failed', message : err.message});
       }
   }
-
+  static example=async()=>{
+    console.log('ehllow');
+  }
   static getAllPayment = async (req, res) => {
     try {
       const organizationId = getRequiredOrganizationId(
