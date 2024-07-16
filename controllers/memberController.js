@@ -66,9 +66,15 @@ class MemberController {
         message: "To get member memberId is required",
       });
     try {
-      const member = await MemberModel.findById(memberId).populate(
-        "organization account seat payments lockers"
-      );
+      const member = await MemberModel.findById(memberId)
+      .populate({
+        path: 'services',
+        populate: {
+          path: 'seat',
+          model: 'Seat'  // Replace 'SeatModel' with the actual name of the seat model if different
+        }
+      })
+      .populate('payments');
       if (!member) throw new Error("No member found  with this id");
 
       //Authorization check
