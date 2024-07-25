@@ -11,6 +11,7 @@ import { validateDuration } from "../utils/validation.js";
 import { getSeat } from "../helper/seat.js";
 import { getLocker } from "../helper/locker.js";
 import { getMember } from "../helper/member.js";
+import PaymentModel from "../models/PaymentModel.js";
 
 class ServiceController {
   static getAllService = async (req, res) => {
@@ -35,6 +36,13 @@ class ServiceController {
       try{
         const member = await getMember(memberId);
         const services = await ServiceModel.find({organization : member.organization, occupant:memberId}).populate("locker seat");
+        if(services.length > 0){
+          const allMemberPayments = await PaymentModel.find({chargedOn : member._id});
+          console.log("all-member-payments-details", allMemberPayments);
+          services.map((service)=>{
+            service.renewalPayments = allMemberPayments.filter((payment => payment.service.toString() == service._id.toString()));
+          })
+        }
         res.status(200).json({status : "success", message : 'services fetched successfully', data : services });
       }catch(err){
         res.status(500).send({ status: "failed", message: err.message });
@@ -163,6 +171,7 @@ class ServiceController {
       return res.status(200).json({
         status: "success",
         message: "Seat deallocated successfully",
+        data : serviceToDeAllocate
       });
     } catch (err) {
       await session.abortTransaction();
@@ -171,8 +180,7 @@ class ServiceController {
       console.error("delete service error", err);
       return res.status(500).json({
         status: "failed",
-        message: "Can't delete the service",
-        error: err.message,
+        message: err.message,
       });
     }
   };
@@ -181,6 +189,7 @@ class ServiceController {
     const { serviceId } = req.params;
     console.log("service id : ", serviceId);
     const { renewalPeriodUnit, renewalPeriodAmount, charges } = req.body;
+    console.log("update-service-data-from-front-end", req.body);
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
@@ -196,6 +205,7 @@ class ServiceController {
         message: "service updated successfully",
         data: updatedService,
       });
+       
       await session.commitTransaction();
       await session.endSession();
     } catch (err) {

@@ -46,16 +46,15 @@ const userSchema = new mongoose.Schema({
   avatar: {
     type : String ,
     default : "https://th.bing.com/th/id/OIP.XA5z4qJxvb0XtfkwB0DLxAAAAA?rs=1&pid=ImgDetMain"
-    },
+  },
   
-
   city: { type: String},
   phone : {type : String},
   address : {type : String},
   status : {
     type : String,
-    enum : ["Active", "Pending", "Suspended"],
-    default : "Active",
+    enum : ["active", "inactive"],
+    default : "active",
     required : true
   },
  

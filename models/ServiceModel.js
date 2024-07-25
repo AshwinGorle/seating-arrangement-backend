@@ -61,8 +61,10 @@ export const serviceSchema = new mongoose.Schema({
     default : 1
   },
 
-  renewalPayments : [RenewalPaymentSchema,
-  ],
+  renewalPayments : [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Payment",
+  }],
 
   charges: {
     type: Number,
