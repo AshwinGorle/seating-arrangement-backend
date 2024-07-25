@@ -14,11 +14,6 @@ export const validateDuration = (req) => {
     if(!((renewalPeriodUnit == "months" || renewalPeriodUnit == "days") && renewalPeriodAmount > 0 )){
         throw new UserInputError("invalid Duration!");
     }
-  const { renewalPeriodUnit, renewalPeriodAmount } = req.body;
-  console.log("renawalPeriod----", renewalPeriodUnit, renewalPeriodAmount)
-  if (!((renewalPeriodUnit == "months" || renewalPeriodUnit == "days") && renewalPeriodAmount > 0)) {
-    throw new UserInputError("invalid Duration!");
-  }
 }
 
 
