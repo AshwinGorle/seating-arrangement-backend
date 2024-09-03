@@ -190,10 +190,12 @@ class ServiceController {
     console.log("service id : ", serviceId);
     const { renewalPeriodUnit, renewalPeriodAmount, charges } = req.body;
     console.log("update-service-data-from-front-end", req.body);
+    console.log("update-service-data-from-front-end", charges);
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      validateDuration(req);
+      if(renewalPeriodAmount || renewalPeriodUnit)
+          validateDuration(req);
       const service = await getService(serviceId);
       const updatedService = await ServiceModel.findByIdAndUpdate(
         serviceId,

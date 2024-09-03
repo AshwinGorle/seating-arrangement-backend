@@ -3,8 +3,10 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import transporter from "../configs/emailConfig.js";
 import sendEmail from "../utils/sendEmail.js";
-import getRequiredOrganizationId from "../utils/getRequiredOrganizationId.js";
-import OrganizationModel from "../models/OrganizationModel.js";
+import { catchAsyncError } from "../middlewares/catchAsyncError.middleware.js";
+import { UserInputError } from "../utils/ErrorClasses.js";
+
+
 class AuthController {
   static homefunction = (req, res) => {
     return res.status(200).send("Shree Ganesh");
@@ -12,7 +14,7 @@ class AuthController {
 
   static getUserByToken = async (token) => {
     const tokenData = jwt.verify(token, process.env.SECRET_KEY);
-    console.log("11 token data ", tokenData);
+    console.log("token data ", tokenData);
     try {
       const user = await UserModel.findOne({ _id: tokenData.userId });
       return user;
@@ -22,7 +24,7 @@ class AuthController {
     }
   };
 
-  static signup = async (req, res) => {
+  static signup = catchAsyncError(async(req, res) => {
     const {
       name,
       phone,
@@ -33,10 +35,7 @@ class AuthController {
       role = "owner",
     } = req.body;
     if (!(password == password_confirmation))
-      return res.status(400).send({
-        status: "failed",
-        message: "Both passowrd doesnot mathch",
-      });
+      throw new UserInputError("Both password did not match");
     if (
       !(
         name &&
@@ -48,12 +47,8 @@ class AuthController {
         role
       )
     )
-      return res.status(400).send({
-        status: "failed",
-        message: "All fields are required!",
-      });
+      throw new UserInputError()
 
-    try {
       const user = await UserModel.findOne({ email: email });
       if (user)
         return res
@@ -83,80 +78,10 @@ class AuthController {
         message: `${role} User Created !`,
         data: newUser,
         token: token,
-      });
-    } catch (err) {
-      return res.status(500).send({
-        status: "failed",
-        message: "user not created",
-        err: err,
-      });
-    }
-  };
-
-  static createOwner = async (req, res) => {
-    const { name, phone, email, password, password_confirmation, gender } =
-      req.body;
-    const role = "owner";
-    if (!(password == password_confirmation))
-      return res.status(400).send({
-        status: "failed",
-        message: "Both passowrd doesnot mathch",
-      });
-    if (
-      !(
-        name &&
-        phone &&
-        email &&
-        password &&
-        password_confirmation &&
-        gender &&
-        role
-      )
-    )
-      return res.status(400).send({
-        status: "failed",
-        message: "All fields are required!",
-      });
-
-    try {
-      const user = await UserModel.findOne({ email: email });
-      if (user)
-        return res
-          .status(409)
-          .send({ status: "failed", message: "User Already exists!" });
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      await UserModel.create({
-        name,
-        phone,
-        email,
-        gender,
-        role,
-        password: hashedPassword,
-      });
-      const newUser = await UserModel.findOne({ email: email }).select(
-        "-password"
-      );
-
-      await sendEmail(
-        email,
-        `Congratulations ${name}! here is your libSteering password`,
-        `Don't share with any one. password : ${password}`
-      );
-      res
-        .status(201)
-        .send({ status: "success", message: "owner created successfully!" });
-    } catch (err) {
-      console.log("create owner err : ", err);
-      return res.status(500).send({
-        status: "failed",
-        message: "user not created",
-        err: err,
-      });
-    }
-  };
-
+     });
   
+  }
+);
 
   static login = async (req, res) => {
     const { email, password } = req.body;

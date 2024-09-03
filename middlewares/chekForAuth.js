@@ -1,10 +1,10 @@
 import AuthController from '../controllers/authController.js';
 
 const checkForAuth = async (req, res, next) => {
-    console.log("6 checkAuth called");
+    console.log("checkAuth called")
     req.user = null;
     const authorizationValue = req?.headers["authorization"];
-    
+    console.log("authorizationValue token", authorizationValue );
     if (!authorizationValue || !authorizationValue.startsWith('Bearer')) {
         return next();
     }
@@ -21,7 +21,8 @@ const checkForAuth = async (req, res, next) => {
             // return res.status(401).json({ status : "failed", message : 'Token has expired' });
             return next();
         } else {
-            return res.status(500).json({ status : "failed", message : 'Internal Server Error' });
+            console.log("auth error : ", error)
+            return res.status(500).json({ status : "failed", message : 'Internal Server while verifying token' });
         }
     }
 };

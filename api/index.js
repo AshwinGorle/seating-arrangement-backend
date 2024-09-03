@@ -17,10 +17,11 @@ import lockerRouter from '../routes/lockerRouter.js';
 import staffRouter from '../routes/staffRouter.js';
 import reportRouter from '../routes/reportRouter.js';
 import serviceRouter from '../routes/serviceRouter.js';
-
-
+import ownerRouter from '../routes/ownerRouter.js';
+import { error } from '../middlewares/error.middleware.js';
 
 const app = express();
+
 
 dotenv.config();
 
@@ -34,8 +35,6 @@ const corsOptions = {
     credentials : true
 }
 
-
-
 app.use(cors(corsOptions));
 
 app.use(express.urlencoded({extended : false}));
@@ -44,8 +43,9 @@ app.use(express.json());
 
 app.use(checkForAuth);
 
-app.get('/',AuthController.homefunction);
-app.use('/api/v1/auth', authRouter)
+// app.get('/',AuthController.homefunction);
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/owner', ownerRouter);
 app.use('/api/v1/member',memberRouter);
 app.use('/api/v1/staff',staffRouter);
 app.use('/api/v1/organization',organizationRouter)
@@ -56,13 +56,10 @@ app.use('/api/v1/schedule/', scheduleRouter);
 app.use('/api/v1/locker',lockerRouter);
 app.use('/api/v1/reports',reportRouter);
 app.use('/api/v1/service',serviceRouter);
-
 app.use('/testing', testingRouter );
-
-
 app.set("view engine" , "ejs");
 app.set("views", path.resolve('./views'));
-
+app.use(error);
 app.listen(PORT,()=>{
     console.log( `server stared at ${PORT}...`)
 })

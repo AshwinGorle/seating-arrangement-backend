@@ -10,10 +10,16 @@ export const validateSchedule = (req) => {
 
 export const validateDuration = (req) => {
     const {renewalPeriodUnit, renewalPeriodAmount} = req.body;
-    console.log("renawalPeriod----", renewalPeriodUnit , renewalPeriodAmount)
-    if(!((renewalPeriodUnit == "months" || renewalPeriodUnit == "days") && renewalPeriodAmount > 0 )){
-        throw new UserInputError("invalid Duration!");
+    if(renewalPeriodUnit){
+      if(!(renewalPeriodUnit == "months" || renewalPeriodUnit == "days"))  throw new UserInputError("invalid Duration!");
     }
+    if(renewalPeriodAmount){
+      if(!(parseInt(renewalPeriodAmount, 10) > 0))  throw new UserInputError("invalid Duration!");
+    }
+    // console.log("renawalPeriod----", renewalPeriodUnit , renewalPeriodAmount)
+    // if(!((renewalPeriodUnit == "months" || renewalPeriodUnit == "days") && parseInt(renewalPeriodAmount, 10) > 0 )){
+    //     throw new UserInputError("invalid Duration!");
+    // }
 }
 
 
