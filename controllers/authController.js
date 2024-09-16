@@ -4,8 +4,10 @@ import jwt from "jsonwebtoken";
 import transporter from "../configs/emailConfig.js";
 import sendEmail from "../utils/sendEmail.js";
 import { catchAsyncError } from "../middlewares/catchAsyncError.middleware.js";
-import { UserInputError } from "../utils/ErrorClasses.js";
-
+import { ServerError, UserInputError } from "../utils/ErrorClasses.js";
+import Errors from "../utils/errorMessages.js";
+import generateOtp from "../utils/generateOtp.js";
+import Success from "../utils/successMessages.js";
 
 class AuthController {
   static homefunction = (req, res) => {
@@ -24,7 +26,8 @@ class AuthController {
     }
   };
 
-  static signup = catchAsyncError(async(req, res) => {
+  static signup = catchAsyncError(async (req, res) => {
+    console.log(req.body);
     const {
       name,
       phone,
@@ -33,9 +36,12 @@ class AuthController {
       password_confirmation,
       gender,
       role = "owner",
+      city,
+      state,
+      country,
     } = req.body;
     if (!(password == password_confirmation))
-      throw new UserInputError("Both password did not match");
+      throw new UserInputError(Errors.AUTH.PASSWORD_MISMATCHED);
     if (
       !(
         name &&
@@ -47,124 +53,215 @@ class AuthController {
         role
       )
     )
-      throw new UserInputError()
+      throw new UserInputError(Errors.AUTH.FIELDS_REQUIRED);
+    const user = await UserModel.findOne({ email: email });
+    // if (user) throw new UserInputError(Errors.AUTH.ALREADY_EXISTS);
+    const salt = await bcrypt.genSalt(10);
+    const otp = generateOtp(4); // Generate OTP
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-      const user = await UserModel.findOne({ email: email });
-      if (user)
-        return res
-          .status(409)
-          .send({ status: "failed", message: "User Already exists!" });
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      await UserModel.create({
-        name,
-        phone,
-        email,
-        gender,
-        role,
-        password: hashedPassword,
-      });
-      const newUser = await UserModel.findOne({ email: email }).select(
-        "-password"
-      );
-      const token = jwt.sign(
-        { userId: newUser._id, userEmail: newUser.email },
-        process.env.SECRET_KEY,
-        { expiresIn: "10d" }
-      );
-      console.log("1 token", token);
-      res.status(201).send({
-        status: "success",
-        message: `${role} User Created !`,
-        data: newUser,
-        token: token,
-     });
-  
-  }
-);
+    const address = {
+      city: city || "N/A",
+      state: state || "N/A",
+      country: country || "N/A",
+    };
 
-  static login = async (req, res) => {
+    await UserModel.create({
+      name,
+      phone,
+      email,
+      gender,
+      role,
+      address,
+      otp,
+      otpExpiresAt: Date.now() + 10 * 60 * 1000, // OTP valid for 10 minutes
+      password: hashedPassword,
+    });
+    await sendEmail({
+      to: email,
+      subject: "OTP for Lib Steering Account Verification",
+      html: `<p>Your OTP for account verification is <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+    });
+    return res.status(201).json({
+      status: "success",
+      message: Success.AUTH.USER_CREATED,
+      verified: false,
+    });
+    // const token = jwt.sign(
+    //   { userId: newUser._id, userEmail: newUser.email },
+    //   process.env.SECRET_KEY,
+    //   { expiresIn: "10d" }
+    // );
+    //   console.log("1 token", token);
+    //   res.status(201).send({
+    //     status: "success",
+    //     message: `${role} User Created !`,
+    //     data: newUser,
+    //     token: token,
+    //  });
+  });
+
+  static verifyEmail = catchAsyncError(async (req, res) => {
+    const { email, otp } = req.body;
+
+    const user = await UserModel.findOne({ email });
+    if (!user) throw new UserInputError(Errors.AUTH.NOT_FOUND);
+    if (user.otp != otp) throw new UserInputError(Errors.AUTH.INVALID_OTP);
+    if (user.otpExpiresAt < Date.now())
+      throw new UserInputError(Errors.AUTH.EXPIRED_OTP);
+
+    user.otp = null;
+    user.otpExpiresAt = null;
+    user.isVerified = true;
+    await user.save();
+
+    const token = jwt.sign(
+      { userId: user._id, userEmail: user.email },
+      process.env.SECRET_KEY,
+      { expiresIn: "30d" }
+    );
+
+    res.status(200).json({
+      status: "success",
+      message: Success.AUTH.EMAIL_VERIFIED,
+      data: user,
+      token: token,
+    });
+
+    console.error("OTP verification error:", err);
+    res.status(500).json({
+      status: "failed",
+      message: "Something went wrong. Try again.",
+      error: err,
+    });
+  });
+
+  static resendOtp = catchAsyncError(async (req, res) => {
+    const { email } = req.body;
+    const {for_reset_password}=req.query;
+    if (!email) throw new UserInputError(Errors.AUTH.FIELDS_REQUIRED);
+    const user = await UserModel.findOne({ email });
+    if (!user) throw new UserInputError(Success.AUTH.NOT_FOUND);
+    if(!for_reset_password){
+      if (user.isVerified) throw new Error(Success.AUTH.ALREADY_VERIFIED);
+    }
+
+    const otp = generateOtp(4); // Generate a new OTP
+    user.otp = otp;
+    user.otpExpiresAt = Date.now() + 10 * 60 * 1000; // OTP valid for 10 minutes
+    await user.save();
+    await sendEmail({
+      to: email,
+      subject: "Resent OTP for Lib Steering Account Verification",
+      html: `<p>Your OTP for account verification is <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: Success.AUTH.OTP_RESENT,
+    });
+  });
+
+  static login = catchAsyncError(async (req, res) => {
     const { email, password } = req.body;
     if (!(email && password))
-      return res.status(400).send({
+      throw new UserInputError(Errors.AUTH.FIELDS_REQUIRED);
+
+    const user = await UserModel.findOne({ email: email });
+    if (!user) throw new UserInputError(Errors.AUTH.NOT_FOUND);
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) throw new UserInputError(Errors.AUTH.INVALID_CREDENTIALS);
+    if (!user.isVerified) {
+      return res.send({
         status: "failed",
-        message: "All fields are required!",
-      });
-    try {
-      const user = await UserModel.findOne({ email: email });
-      if (!user)
-        return res.status(400).send({
-          status: "failed",
-          message: "Email or Password is wrong!",
-        });
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch)
-        return res.status(400).send({
-          status: "failed",
-          message: "Email or Password is wrong!",
-        });
-      const token = jwt.sign(
-        { userId: user._id, userEmail: user.email },
-        process.env.SECRET_KEY,
-        { expiresIn: "10d" }
-      );
-      delete user.password;
-      res.status(200).cookie("token", token).send({
-        status: "success",
-        message: "login successfull!",
-        token: token,
-        data: user,
-      });
-    } catch (err) {
-      console.log("4 login err : ", err);
-      res.status(500).send({
-        status: "failed",
-        message: "can't login, Something went wrong!",
-        err: err,
+        message: Errors.AUTH.INVALID_CREDENTIALS,
+        isVerified: false,
       });
     }
-  };
+    const token = jwt.sign(
+      { userId: user._id, userEmail: user.email },
+      process.env.SECRET_KEY,
+      { expiresIn: "30d" }
+    );
 
-  static sendResetPasswordEmail = async (req, res) => {
+    res.status(200).cookie("token", token).send({
+      status: "success",
+      message: Success.AUTH.LOGIN_SUCCESS,
+      token: token,
+      data: user,
+      isVerified: false,
+    });
+  });
+
+  static sendResetPasswordEmail = catchAsyncError(async (req, res) => {
     const { email } = req.body;
-    if (!email)
-      return res
-        .status(400)
-        .send({ status: "failed", message: "Email is required!" });
-    try {
-      const user = await UserModel.findOne({ email: email });
-      if (!user)
-        return res
-          .status(400)
-          .send({ status: "failed", message: "Email does not exits!" });
-      const secretKey = user._id + process.env.SECRET_KEY;
-      const token = jwt.sign({ userId: user._id }, secretKey, {
-        expiresIn: "10m",
-      });
-      const link = `${process.env.BASE_URL}/api/v1/auth/reset_passowrd_page/${user._id}/${token}`;
-      console.log("14 reset password token : ", token);
-      console.log("14 reset password userId : ", user._id);
-      let info = await transporter.sendMail({
-        from: process.env.EMAIL_FROM,
-        to: user.email,
-        subject: "Password Reset Link for Liberary Management",
-        html: `<a href=${link}> click here to reset your password </a>`,
-      });
-      return res.status(200).send({
-        status: "success",
-        message: "Email Sent Successfully!",
-        data: info,
-      });
-    } catch (err) {
-      console.log("9 email sending error : ", err);
-      return res.status(500).send({
-        status: "failed",
-        message: "Email not sent! Something went wrong try again.",
-        err: err,
-      });
-    }
-  };
+    if (!email) throw new UserInputError(Errors.AUTH.FIELDS_REQUIRED);
 
+    const user = await UserModel.findOne({ email: email });
+    if (!user) throw new ServerError(Errors.AUTH.NOT_FOUND);
+
+    const otp = generateOtp(4);
+    user.otp = otp;
+    user.otpExpiresAt = Date.now() + 10 * 60 * 1000; // OTP valid for 10 minutes
+    await user.save();
+    await sendEmail({
+      to: user.email,
+      subject: "Password Reset OTP",
+      html: `<p>Your OTP for password reset is <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+    });
+    return res.status(200).send({
+      status: "success",
+      message: Success.AUTH.OTP_SENT,
+    });
+  });
+
+static resetPasswordWithOtp = catchAsyncError(async (req, res) => {
+  const { email, otp, newPassword, newPasswordConfirmation } = req.body;
+  console.log("resetPasswordWithOtp : otp ", otp)
+  if(!email || !otp || !newPassword || !newPasswordConfirmation ) throw new UserInputError(Errors.AUTH.FIELDS_REQUIRED);
+  if (newPassword !== newPasswordConfirmation) throw new UserInputError(Errors.AUTH.PASSWORD_MISMATCHED);
+  const user = await UserModel.findOne({ email });
+  console.log("resetPasswordWithOtp : user in email ", user)
+  if(!user) throw new ServerError(Errors.AUTH.NOT_FOUND);
+  if(!user.otp)throw new UserInputError(Errors.AUTH.OTP_NOT_FOUND);
+  if(user.otp != otp ) throw new UserInputError(Errors.AUTH.INVALID_OTP);
+  if (user.otpExpiresAt < Date.now()) throw new UserInputError(Errors.AUTH.EXPIRED_OTP)
+    
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = hashedPassword;
+    user.otp = null;
+      user.otpExpiresAt = null;
+      await user.save();
+
+      return res
+        .status(200)
+        .json({ status: "success", message: Success.AUTH.RESET_SUCCESSFUL  });
+        
+})
+
+static changePassword = catchAsyncError(async (req, res) => {
+  const { currentPassword, newPassword, newPasswordConfirmation } = req.body;
+  if (!currentPassword || !newPassword || !newPasswordConfirmation)
+    throw new UserInputError(Errors.AUTH.FIELDS_REQUIRED);
+  if (newPassword !== newPasswordConfirmation)
+    throw new UserInputError(Errors.AUTH.PASSWORD_MISMATCHED);
+
+  const isMatch = await bcrypt.compare(currentPassword, req.user.password);
+  if (!isMatch) throw new UserInputError(Errors.AUTH.WRONG_PASSWORD);
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(newPassword, salt);
+  await UserModel.findByIdAndUpdate(req.user._id, {
+    password: hashedPassword,
+  });
+  return res.status(200).send({
+    status: "success",
+    message: Success.AUTH.PASSWORD_CHANGED,
+  });
+});
+
+
+//------------------------recheck--------------
   static resetPasswordWithLink = async (req, res) => {
     console.log("50 password reset with link called ", req.body);
     const { userId, token } = req.params;
@@ -230,40 +327,6 @@ class AuthController {
     res.render("resetPassword", { userId: userId, token: token });
   };
 
-  static changePassword = async (req, res) => {
-    const { currentPassword, newPassword, newPasswordConfirmation } = req.body;
-    if (!currentPassword || !newPassword || !newPasswordConfirmation)
-      return res
-        .status(400)
-        .send({ status: "failed", message: "All fields are required" });
-    if (newPassword !== newPasswordConfirmation)
-      return res.status(400).send({
-        status: "failed",
-        message: "Both password does not match!",
-      });
-    try {
-      const isMatch = await bcrypt.compare(currentPassword, req.user.password);
-      if (!isMatch)
-        return res
-          .status(400)
-          .send({ status: "failed", message: "Incorrect Password!" });
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(newPassword, salt);
-      await UserModel.findByIdAndUpdate(req.user._id, {
-        password: hashedPassword,
-      });
-      return res.status(200).send({
-        status: "success",
-        message: "Password changed successfully!",
-      });
-    } catch (err) {
-      console.log("51 chagne password error : ", err);
-      return res.status(500).send({
-        status: "failed",
-        message: "Something went wrong, try again!",
-        err: err,
-      });
-    }
-  };
+ 
 }
 export default AuthController;

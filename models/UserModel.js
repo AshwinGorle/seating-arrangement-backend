@@ -1,19 +1,22 @@
 import mongoose from 'mongoose'
 
-const addressSchema = new mongoose.Schema({
-     houseNumber : {type : String},
-     landMark : {type : String},
-     coloni : {type :String},
-     city : {type : String, default : "indore"},
-     state : {type : String, default : "Madhya Pradesh"},
-     pinCode : {type : Number}
+const AddressSchema = new mongoose.Schema({
+  city : {
+   type : String,
+  },
+  state : {
+   type : String,
+  },
+  country : {
+   type : String
+  }
 })
 
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true,
+    // unique: true,
     trim: true
   },
   name: {
@@ -37,7 +40,9 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  
+  address : {
+    type : AddressSchema
+   },
   gender : {
     type :  String,
     enum : ["M", "F", "O"]
@@ -48,9 +53,8 @@ const userSchema = new mongoose.Schema({
     default : "https://th.bing.com/th/id/OIP.XA5z4qJxvb0XtfkwB0DLxAAAAA?rs=1&pid=ImgDetMain"
   },
   
-  city: { type: String},
+ 
   phone : {type : String},
-  address : {type : String},
   status : {
     type : String,
     enum : ["active", "inactive"],
@@ -61,7 +65,19 @@ const userSchema = new mongoose.Schema({
   organization : {
     type : mongoose.Schema.Types.ObjectId,
     ref : 'Organization' 
-  }
+  },
+  otp: {
+    type: Number,
+    default: null,
+  },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+  otpExpiresAt: {
+    type: Date,
+    default: null,
+  },
 
 });
 
