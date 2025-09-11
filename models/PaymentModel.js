@@ -51,7 +51,7 @@ const paymentSchema = new mongoose.Schema(
       default: "cash",
     },
 
-    desciption: {
+    description: {
       type: String,
     },
 

@@ -8,12 +8,15 @@ export const catchAsyncError = (theFun, withTransaction = false) => async (req, 
     }
     try{
       await theFun(req, res, next, session)
+      console.log("inside try ---------------------------------------- ")
       if(session) await session.commitTransaction()
     }catch(err){
+      console.log("inside catch : ----------------------------------------")
       if(session) await session.abortTransaction()
-      next(err)
+        next(err)
     }finally{
-      if(session) session.endSession();
+      console.log("inside finally : ----------------------------------------")
+      if(session) await session.endSession();
     }
 
     // theFun(req, res, next).catch(next);

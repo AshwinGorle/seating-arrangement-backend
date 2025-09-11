@@ -164,6 +164,7 @@ class AuthController {
 
   static login = catchAsyncError(async (req, res) => {
     const { email, password } = req.body;
+    console.log(email, password);
     if (!(email && password))
       throw new UserInputError(Errors.AUTH.FIELDS_REQUIRED);
 

@@ -13,6 +13,16 @@ const Success = {
       PASSWORD_CHANGED : "Password changed successfully"
 
     },
+    PLAN : {
+      CREATED : "Subscription plan created successfully!",
+      UPDATED : "Subscription plan updated successfully!",
+      DELETED : "Subscription plan deleted successfully!",
+      FETCHED : "Subscription plan fetched successfully!",
+      ALL_FETCHED : "Subscription all plans fetched successfully!",
+    },
+    PAYMENT : {
+      ORDER_SUCCESSFUL : (orderId, buyerId, planId)=>`Order(${orderId}) sent successfully to buyer(${buyerId}) for plan(${planId})`
+    },
     VALIDATION: {
       FIELD_REQUIRED: (field) => `${field} is required!`,
       INVALID_ID: "Invalid ID provided!",

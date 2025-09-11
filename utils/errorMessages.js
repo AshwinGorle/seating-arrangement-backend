@@ -20,6 +20,22 @@ const Errors = {
       WRONG_PASSWORD : "Wrong password"
 
     },
+
+    OWNER : {
+       NOT_FOUND : "Owner not found!"
+    },
+
+    PLAN : {
+       NOT_FOUND : "Subscription plan not found!"
+    },
+    
+    PAYMENT : {
+       INSUFFICIENT_INFO : "To generate order (Buyer Id) and (plan Id) is required!",
+       BUYER_NOT_FOUND : "Buyer Does not exists",
+       PAYMENT_FAILED : "Payment failed, Please try again",
+
+    },
+
     VALIDATION: {
       FIELD_REQUIRED: (field) => `${field} is required!`,
       INVALID_ID: "Invalid ID provided!",

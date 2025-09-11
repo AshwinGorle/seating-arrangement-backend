@@ -12,7 +12,7 @@ import { getService } from "../helper/service.js";
 import { ServerError } from "../utils/ErrorClasses.js";
 class PaymentController {
 
-  static createPaymentUtil = ( {amount, chargedOn, serviceType, service , status='pending' ,method='cash', desciption, organization , renewalPeriodAmount,
+  static createPaymentUtil = ( {amount, chargedOn, serviceType, service , status='pending' ,method='cash', description, organization , renewalPeriodAmount,
     renewalPeriodUnit} ) => {
     try{
       if(!amount || !chargedOn || !serviceType || !service || !organization || !renewalPeriodAmount || !renewalPeriodUnit) throw new Error('All * fields are required');
@@ -24,7 +24,7 @@ class PaymentController {
         status,
         method,
         organization,
-        desciption,
+        description,
         timeline : [],
         renewalPeriodAmount,
         renewalPeriodUnit
@@ -34,7 +34,7 @@ class PaymentController {
        throw new Error(err.message);
     }
   }
-  // we will recive a payment id which which is supposed to a pending paymnet we have to mark it complete
+  // we will receive a payment id which which is supposed to a pending payment we have to mark it complete
   static markPaymentCompletedUtil = async  (paymentId)=>{
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -99,7 +99,7 @@ class PaymentController {
   }  
 
   static chargePayment = async (req, res) =>{
-        const {amount, serviceId, validity, method, desciption , isReceived} = req.body;
+        const {amount, serviceId, validity, method, description , isReceived} = req.body;
         const session = await mongoose.startSession();
         await session.startTransaction();
         try{
@@ -118,7 +118,7 @@ class PaymentController {
             service : serviceId,
             method,
             organization,
-            desciption,
+            description,
             validity : validityDate,
             status : 'pending',
             timeline : []
@@ -189,13 +189,7 @@ class PaymentController {
         return res.status(500).json({status : 'failed', message : err.message});
       }
   }
-  static example=async()=>{
-    console.log('ehllow');
-    console.log('ehllow');
-    console.log('ehllow');
-    console.log('ehllow');
-    
-  }
+
   static getAllPayment = async (req, res) => {
     try {
       const organizationId = getRequiredOrganizationId(

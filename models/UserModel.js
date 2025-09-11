@@ -78,6 +78,13 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  subscription : {
+    type : Object
+  },
+  systemAccess : {
+    type   : Boolean,
+    default : false
+  }
 
 });
 
